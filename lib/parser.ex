@@ -1,60 +1,74 @@
 defmodule Quine.Parser do
   @moduledoc """
   A parser for simple propositional logic statements
-
-  sentence  := A | B | C ...
-  negation  := ~ sentence
-
   """
 
   import NimbleParsec
 
   sentence = ascii_string([?A..?Z], 1)
 
-  negation =
-    empty()
-    |> ignore(string("~"))
-    |> concat(sentence)
-    |> unwrap_and_tag(:not)
+  statement =
+    choice([
+      ignore(string("("))
+      |> concat(parsec(:expression))
+      |> ignore(string(")")),
+      parsec(:negation),
+      sentence
+    ])
 
   disjunction =
     empty()
-    |> concat(sentence)
+    |> concat(statement)
     |> ignore(string("v"))
-    |> concat(sentence)
+    |> concat(statement)
     |> tag(:or)
 
   conjunction =
     empty()
-    |> concat(sentence)
+    |> concat(statement)
     |> ignore(string("^"))
-    |> concat(sentence)
+    |> concat(statement)
     |> tag(:and)
 
   implication =
     empty()
-    |> concat(sentence)
+    |> concat(statement)
     |> ignore(string("->"))
-    |> concat(sentence)
+    |> concat(statement)
     |> tag(:if)
 
   biconditional =
     empty()
-    |> concat(sentence)
+    |> concat(statement)
     |> ignore(string("<->"))
-    |> concat(sentence)
+    |> concat(statement)
     |> tag(:iff)
 
-  expression =
-    empty()
-    |> choice([
-      disjunction,
-      conjunction,
+  defcombinatorp(
+    :negation,
+    ignore(string("~"))
+    |> concat(statement)
+    |> unwrap_and_tag(:not)
+  )
+
+  defcombinatorp(
+    :expression,
+    choice([
       implication,
       biconditional,
-      negation,
-      sentence
+      disjunction,
+      conjunction,
+      parsec(:negation),
+      statement
     ])
+  )
 
-  defparsec(:parse, expression)
+  defparsec(:parse_expression, parsec(:expression))
+
+  def parse(string) do
+    case parse_expression(string) do
+      {:ok, [parsed], "", _, _, _} -> {:ok, parsed}
+      _ -> {:error, :parse_error}
+    end
+  end
 end
