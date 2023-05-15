@@ -4,6 +4,62 @@ defmodule Quine do
   """
 
   alias Quine.Parser
+  alias Quine.Evaluator
+
+  @doc "Determines the truth value of an expression given a model of its sentences"
+  def evaluate(expression, truth_values) do
+    # TODO: error if not all variables present or any values are not boolean
+    expression
+    |> parse()
+    |> Evaluator.evaluate(truth_values)
+  end
+
+  def tautology?(expression) do
+    variables = variables(expression)
+    parsed_expression = parse(expression)
+    truth_values = generate_truth_values(variables)
+
+    length(truth_values) > 0 and
+      Enum.all?(truth_values, &Evaluator.evaluate(parsed_expression, &1))
+  end
+
+  def contradiction?(expression) do
+    variables = variables(expression)
+    parsed_expression = parse(expression)
+    truth_values = generate_truth_values(variables)
+
+    length(truth_values) > 0 and
+      Enum.all?(truth_values, &(not Evaluator.evaluate(parsed_expression, &1)))
+  end
+
+  def satisfiable?(expression) do
+    not contradiction?(expression)
+  end
+
+  def contingent?(expression) do
+    satisfiable?(expression) and not tautology?(expression)
+  end
+
+  defp variables(expression) when is_binary(expression) do
+    ~r|[A-Z]|
+    |> Regex.scan(expression)
+    |> List.flatten()
+    |> Enum.uniq()
+  end
+
+  def generate_truth_values(variables) do
+    possible_values = for i <- variables, val <- [true, false], do: %{i => val}
+
+    possible_values =
+      for a <- possible_values, b <- possible_values, uniq: true, do: Map.merge(a, b)
+
+    Enum.filter(possible_values, &(map_size(&1) == length(variables)))
+  end
+
+  # def equivalent?(expression1, expression2) do
+  # if their truth tables are the same
+  # e.g. p → q and q ∨ ¬p
+  # end
 
   @doc """
   Given a list of premises and a conclusion to prove, returns a list of valid steps to prove the
