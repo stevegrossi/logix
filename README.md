@@ -96,3 +96,7 @@ If you have "X", then you're entitled to "X v Y".
 #### v Elimination
 
 If you have "X v Y", "X -> Z", and "Y -> Z", then you're entitled to Z.
+
+### References
+
+- https://people.cs.pitt.edu/~milos/courses/cs441/lectures/Class2.pdf

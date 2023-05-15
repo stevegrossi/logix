@@ -123,6 +123,13 @@ defmodule QuineTest do
     test "returns true if the given expressions have the same truth values" do
       assert Quine.equivalent?("A->B", "~B->~A")
       assert Quine.equivalent?("P->Q", "Qv~P")
+      assert Quine.equivalent?("~(~A)", "A")
+      assert Quine.equivalent?("AvB", "BvA")
+      assert Quine.equivalent?("A^B", "B^A")
+
+      # DeMorgan’s Laws
+      assert Quine.equivalent?("~(PvQ)", "~P^~Q")
+      assert Quine.equivalent?("~(P^Q)", "~Pv~Q")
     end
 
     test "returns false if the given expressions do not have the same truth values" do
