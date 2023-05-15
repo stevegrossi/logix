@@ -118,4 +118,15 @@ defmodule QuineTest do
       Enum.each(@contradictions, &refute(Quine.contingent?(&1)))
     end
   end
+
+  describe "equivalent?/2" do
+    test "returns true if the given expressions have the same truth values" do
+      assert Quine.equivalent?("A->B", "~B->~A")
+      assert Quine.equivalent?("P->Q", "Qv~P")
+    end
+
+    test "returns false if the given expressions do not have the same truth values" do
+      refute Quine.equivalent?("A->B", "AvB")
+    end
+  end
 end

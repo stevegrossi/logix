@@ -30,6 +30,16 @@ Quine.contradtion?("A->B")
 #=> false
 ```
 
+### Detecting Logical Equivalence
+
+```elixir
+Quine.equivalent?("A->B", "~B->~A")
+#=> true
+
+Quine.equivalent?("A->B", "AvB")
+#=> false
+```
+
 ## Eventually...
 
 - Derive proofs of conclusions from a set of assumptions, e.g. `Quine.prove(["A", "A->B"], "B")`

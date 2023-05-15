@@ -56,10 +56,9 @@ defmodule Quine do
     Enum.filter(possible_values, &(map_size(&1) == length(variables)))
   end
 
-  # def equivalent?(expression1, expression2) do
-  # if their truth tables are the same
-  # e.g. p → q and q ∨ ¬p
-  # end
+  def equivalent?(expression1, expression2) do
+    tautology?("(#{expression1})<->(#{expression2})")
+  end
 
   @doc """
   Given a list of premises and a conclusion to prove, returns a list of valid steps to prove the
