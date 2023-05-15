@@ -3,6 +3,27 @@ defmodule QuineTest do
 
   doctest Quine
 
+  @tautologies [
+    "Av~A",
+    "A->A",
+    "A<->A",
+    "(A->B)<->(Bv~A)",
+    "(PvQ)v(~P^~Q)"
+  ]
+
+  @contradictions [
+    "A^~A",
+    "A<->~A",
+    "(PvQ)^(~P^~Q)"
+  ]
+
+  @contingencies [
+    "AvB",
+    "A^B",
+    "A->B",
+    "A<->B"
+  ]
+
   describe "evaluate/2" do
     test "returns the truth-value of an expression given truth values of its sentences" do
       assert Quine.evaluate("A", %{"A" => true}) == true
@@ -44,64 +65,57 @@ defmodule QuineTest do
 
   describe "tautology?/1" do
     test "returns true if an expression is always true" do
-      assert Quine.tautology?("Av~A")
-      assert Quine.tautology?("A->A")
-      assert Quine.tautology?("A<->A")
-      assert Quine.tautology?("(A->B)<->(Bv~A)")
-      assert Quine.tautology?("(PvQ)v(~P^~Q)")
+      Enum.each(@tautologies, &assert(Quine.tautology?(&1)))
     end
 
-    test "returns false expressions that are only sometimes true" do
-      refute Quine.tautology?("A->B")
+    test "returns false for expressions that are only sometimes true" do
+      Enum.each(@contingencies, &refute(Quine.tautology?(&1)))
     end
 
     test "returns false for contradictions" do
-      refute Quine.tautology?("A<->~A")
-      refute Quine.tautology?("(PvQ)^(~P^~Q)")
+      Enum.each(@contradictions, &refute(Quine.tautology?(&1)))
     end
   end
 
   describe "contradiction?/1" do
-    test "returns whether or not an expression is never true" do
-      assert Quine.contradiction?("A^~A")
-      assert Quine.contradiction?("A<->~A")
-      assert Quine.contradiction?("(PvQ)^(~P^~Q)")
+    test "returns true for expressions that are never true" do
+      Enum.each(@contradictions, &assert(Quine.contradiction?(&1)))
     end
 
     test "returns false for satisfiable expresions" do
-      refute Quine.contradiction?("A->B")
+      Enum.each(@contingencies, &refute(Quine.contradiction?(&1)))
     end
 
     test "returns false for tautologies" do
-      refute Quine.contradiction?("(PvQ)v(~P^~Q)")
+      Enum.each(@tautologies, &refute(Quine.contradiction?(&1)))
     end
   end
 
   describe "satisfiable?/1" do
-    test "returns whether or not an expression is true under any circumstances" do
-      assert Quine.satisfiable?("A->B")
+    test "returns true for expressions that are always true" do
+      Enum.each(@tautologies, &assert(Quine.satisfiable?(&1)))
     end
 
-    test "returns true for tautologies" do
-      assert Quine.satisfiable?("A->A")
+    test "returns true for expressions that are sometimes true" do
+      Enum.each(@contingencies, &assert(Quine.satisfiable?(&1)))
     end
 
-    test "returns false for contradictions" do
-      refute Quine.satisfiable?("A^~A")
+    test "returns false for expressions that are never true" do
+      Enum.each(@contradictions, &refute(Quine.satisfiable?(&1)))
     end
   end
 
   describe "contingent?/1" do
-    test "returns whether or not an expression is true under some but not all circumstances" do
-      assert Quine.contingent?("A->B")
+    test "returns true for expressions that are only sometimes true" do
+      Enum.each(@contingencies, &assert(Quine.contingent?(&1)))
     end
 
-    test "returns false for tautologies" do
-      refute Quine.contingent?("A->A")
+    test "returns false for expressions that are always true" do
+      Enum.each(@tautologies, &refute(Quine.contingent?(&1)))
     end
 
-    test "returns false for contradictions" do
-      refute Quine.contingent?("A^~A")
+    test "returns false for expressions that are never true" do
+      Enum.each(@contradictions, &refute(Quine.contingent?(&1)))
     end
   end
 end
