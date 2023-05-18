@@ -8,7 +8,6 @@ defmodule Quine do
 
   @doc "Determines the truth value of an expression given a model of its sentences"
   def evaluate(expression, truth_values) do
-    # TODO: error if not all variables present or any values are not boolean
     expression
     |> parse()
     |> Evaluator.evaluate(truth_values)

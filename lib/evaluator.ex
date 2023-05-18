@@ -4,7 +4,11 @@ defmodule Quine.Evaluator do
   """
 
   def evaluate(sentence, truth_values) when is_binary(sentence) do
-    Map.get(truth_values, sentence)
+    case Map.get(truth_values, sentence) do
+      nil -> raise ArgumentError, "missing truth value for sentence '#{sentence}'"
+      value when is_boolean(value) -> value
+      _ -> raise ArgumentError, "received non-boolean truth value for sentence '#{sentence}'"
+    end
   end
 
   def evaluate({:not, expression}, truth_values) do

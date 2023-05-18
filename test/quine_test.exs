@@ -61,6 +61,18 @@ defmodule QuineTest do
                "D" => true
              }) == false
     end
+
+    test "errors for missing truth values" do
+      assert_raise ArgumentError, "missing truth value for sentence 'B'", fn ->
+        Quine.evaluate("A<->B", %{"A" => true})
+      end
+    end
+
+    test "errors for non-boolean truth values" do
+      assert_raise ArgumentError, "received non-boolean truth value for sentence 'A'", fn ->
+        Quine.evaluate("A<->B", %{"A" => 1, "B" => 2})
+      end
+    end
   end
 
   describe "tautology?/1" do
