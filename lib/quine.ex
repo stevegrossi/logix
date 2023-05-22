@@ -101,85 +101,168 @@ defmodule Quine do
     # Negation Elimination
     # ✅ Implication Elimination
     # Disjunction Elimination
-    # Conjunction Elimination
+    # ✅ Conjunction Elimination
     # ✅ Biconditional Elimination
-    try_implication_elimination(proof, conclusion) ||
+    try_conjunction_elimination(proof, conclusion) ||
+      try_implication_elimination(proof, conclusion) ||
       try_biconditional_elimination(proof, conclusion) ||
+      try_disjunction_elimination(proof, conclusion) ||
       @failure
   end
 
   # Once we start proving more than just sentences...
   # defp prove_by_elimination(_proof, _conclusion), do: @failure
 
-  defp try_implication_elimination(proof, conclusion) do
-    line_implying_conclusion =
-      Enum.find_value(proof, fn {line, {statement, _reason}} ->
-        case parse(statement) do
-          {:if, [_left, ^conclusion]} -> line
-          _ -> nil
-        end
-      end)
+  defp try_conjunction_elimination(proof, conclusion) do
+    case find_conjunction_including(proof, conclusion) do
+      {line, _conjunction} ->
+        step = {Parser.print!(conclusion), {:conjunction_elimination, [line]}}
+        add_line_to_proof(proof, step)
 
-    if line_implying_conclusion do
-      {:if, [left, _conclusion]} =
-        proof
-        |> Map.get(line_implying_conclusion)
-        |> elem(0)
-        |> parse()
-
-      case evidence_for(proof, left) do
-        nil ->
-          nil
-
-        line ->
-          step =
-            {Parser.print!(conclusion),
-             {:implication_elimination, [line, line_implying_conclusion]}}
-
-          add_line_to_proof(proof, step)
-      end
-    else
-      nil
+      nil ->
+        nil
     end
   end
 
-  defp try_biconditional_elimination(proof, conclusion) do
-    line_implying_conclusion =
-      Enum.find_value(proof, fn {line, {statement, _reason}} ->
-        case parse(statement) do
-          {:iff, [_left, ^conclusion]} -> line
-          {:iff, [^conclusion, _right]} -> line
-          _ -> nil
-        end
-      end)
-
-    if line_implying_conclusion do
-      biconditional_implying_conclusion =
-        proof
-        |> Map.get(line_implying_conclusion)
-        |> elem(0)
-        |> parse()
-
-      needed =
-        case biconditional_implying_conclusion do
-          {:iff, [left, ^conclusion]} -> left
-          {:iff, [^conclusion, right]} -> right
-        end
-
-      case evidence_for(proof, needed) do
-        nil ->
-          nil
-
-        line ->
-          step =
-            {Parser.print!(conclusion),
-             {:biconditional_elimination, [line, line_implying_conclusion]}}
-
-          add_line_to_proof(proof, step)
+  defp find_conjunction_including(proof, conclusion) do
+    Enum.find(proof, fn {_line, {statement, _reason}} ->
+      case parse(statement) do
+        {:and, [^conclusion, _right]} -> true
+        {:and, [_left, ^conclusion]} -> true
+        _ -> false
       end
-    else
-      nil
+    end)
+  end
+
+  defp try_disjunction_elimination(proof, conclusion) do
+    case find_implications_concluding(proof, conclusion) do
+      implication_lines when is_list(implication_lines) and length(implication_lines) > 1 ->
+        antecedents =
+          Enum.map(implication_lines, fn {_line_num, {implication, _reason}} ->
+            {:if, [antecedent, _conclusion]} = parse(implication)
+            antecedent
+          end)
+
+        case find_disjunction_including(proof, antecedents) do
+          nil ->
+            nil
+
+          disjunction_line ->
+            # need to filter implication_lines by the ones in the disjunction
+            {:or, disjuncts} = parse(elem(elem(disjunction_line, 1), 0))
+
+            relevant_implication_lines =
+              implication_lines
+              |> Enum.filter(fn {_line, {implication, _reason}} ->
+                {:if, [antecedent, _consequent]} = parse(implication)
+                antecedent in disjuncts
+              end)
+
+            reasons =
+              (relevant_implication_lines ++ [disjunction_line])
+              |> Enum.map(&elem(&1, 0))
+              |> Enum.sort()
+
+            step = {Parser.print!(conclusion), {:disjunction_elimination, reasons}}
+
+            add_line_to_proof(proof, step)
+        end
+
+      _ ->
+        nil
     end
+  end
+
+  defp find_disjunction_including(proof, statements) do
+    Enum.find(proof, fn {_line_num, {statement, _reason}} ->
+      case parse(statement) do
+        {:or, [left, right]} ->
+          left in statements and right in statements
+
+        _ ->
+          nil
+      end
+    end)
+  end
+
+  defp try_implication_elimination(proof, conclusion) do
+    case find_implication_concluding(proof, conclusion) do
+      {line_implying_conclusion, {implication, _reason}} ->
+        {:if, [antecedent, ^conclusion]} = parse(implication)
+
+        case evidence_for(proof, antecedent) do
+          nil ->
+            nil
+
+          line ->
+            step =
+              {Parser.print!(conclusion),
+               {:implication_elimination, [line, line_implying_conclusion]}}
+
+            add_line_to_proof(proof, step)
+        end
+
+      nil ->
+        nil
+    end
+  end
+
+  defp find_implication_concluding(proof, conclusion) do
+    case find_implications_concluding(proof, conclusion) do
+      [] -> nil
+      [first | _] -> first
+    end
+  end
+
+  defp find_implications_concluding(proof, conclusion) do
+    Enum.filter(proof, fn {_line, {statement, _reason}} ->
+      case parse(statement) do
+        {:if, [_antecedent, ^conclusion]} -> true
+        _ -> false
+      end
+    end)
+  end
+
+  defp try_biconditional_elimination(proof, conclusion) do
+    case find_biconditional_including(proof, conclusion) do
+      {line_implying_conclusion, _biconditional} ->
+        biconditional_implying_conclusion =
+          proof
+          |> Map.get(line_implying_conclusion)
+          |> elem(0)
+          |> parse()
+
+        needed =
+          case biconditional_implying_conclusion do
+            {:iff, [left, ^conclusion]} -> left
+            {:iff, [^conclusion, right]} -> right
+          end
+
+        case evidence_for(proof, needed) do
+          nil ->
+            nil
+
+          line ->
+            step =
+              {Parser.print!(conclusion),
+               {:biconditional_elimination, [line, line_implying_conclusion]}}
+
+            add_line_to_proof(proof, step)
+        end
+
+      nil ->
+        nil
+    end
+  end
+
+  defp find_biconditional_including(proof, conclusion) do
+    Enum.find(proof, fn {_line, {statement, _reason}} ->
+      case parse(statement) do
+        {:iff, [_left, ^conclusion]} -> true
+        {:iff, [^conclusion, _right]} -> true
+        _ -> false
+      end
+    end)
   end
 
   defp prove_conjunction(proof, {:and, [left, right]} = conclusion) do

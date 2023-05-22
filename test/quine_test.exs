@@ -190,5 +190,27 @@ defmodule QuineTest do
                3 => {"B", {:biconditional_elimination, [1, 2]}}
              }
     end
+
+    test "proves by conjunction elimination" do
+      assert Quine.prove(["A^B"], "A") == %{
+               1 => {"A^B", :premise},
+               2 => {"A", {:conjunction_elimination, [1]}}
+             }
+
+      assert Quine.prove(["A^B"], "B") == %{
+               1 => {"A^B", :premise},
+               2 => {"B", {:conjunction_elimination, [1]}}
+             }
+    end
+
+    test "proves by disjunction elimination" do
+      assert Quine.prove(["AvB", "A->C", "B->C", "D->C"], "C") == %{
+               1 => {"AvB", :premise},
+               2 => {"A->C", :premise},
+               3 => {"B->C", :premise},
+               4 => {"D->C", :premise},
+               5 => {"C", {:disjunction_elimination, [1, 2, 3]}}
+             }
+    end
   end
 end
