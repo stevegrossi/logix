@@ -148,4 +148,29 @@ defmodule QuineTest do
       refute Quine.equivalent?("A->B", "AvB")
     end
   end
+
+  describe "prove/2" do
+    test "returns an error when proving fails" do
+      assert Quine.prove(["A"], "A^B") == {:error, :proof_failed}
+    end
+
+    test "proves simple conjunctions" do
+      result = Quine.prove(["A", "B"], "A^B")
+
+      assert result == %{
+               1 => {"A", :premise},
+               2 => {"B", :premise},
+               3 => {"A^B", :conjunction_introduction, [1, 2]}
+             }
+    end
+
+    test "proves simple disjunctions" do
+      result = Quine.prove(["A"], "AvB")
+
+      assert result == %{
+               1 => {"A", :premise},
+               2 => {"AvB", :disjunction_introduction, [1]}
+             }
+    end
+  end
 end

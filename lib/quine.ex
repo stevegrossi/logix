@@ -68,22 +68,74 @@ defmodule Quine do
       iex> Quine.prove(["A", "A->B"], "B")
       %{
         1 => {"A", :premise},
-        2 => {"A->B", :premise}
+        2 => {"A->B", :premise},
+        3 => {"B", {:implication_elimination, [1, 2]}}
       }
-      # Soon:
-      # 3 => {"B", {:implication_elimination, [1, 2]}}
 
   """
   def prove(premises, conclusion) do
     parsed_premises = Enum.map(premises, &parse/1)
-    _parsed_conclusion = parse(conclusion)
+    parsed_conclusion = parse(conclusion)
+    proof = initialize_proof_with_premises(parsed_premises)
 
-    _steps =
-      parsed_premises
-      |> Enum.with_index(1)
-      |> Map.new(fn {premise, index} ->
-        {index, {Parser.print!(premise), :premise}}
-      end)
+    case parsed_conclusion do
+      {:and, _} -> prove_conjunction(proof, parsed_conclusion)
+      {:or, _} -> prove_disjunction(proof, parsed_conclusion)
+      _ -> {:error, :proof_failed}
+    end
+  end
+
+  defp initialize_proof_with_premises(premises) do
+    premises
+    |> Enum.with_index(1)
+    |> Map.new(fn {premise, index} ->
+      {index, {Parser.print!(premise), :premise}}
+    end)
+  end
+
+  defp prove_conjunction(proof, {:and, [left, right]} = conclusion) do
+    line_proving_left = evidence_for(proof, left)
+    line_proving_right = evidence_for(proof, right)
+    next_line = next_line(proof)
+
+    if line_proving_left && line_proving_right do
+      step =
+        {Parser.print!(conclusion), :conjunction_introduction,
+         [line_proving_left, line_proving_right]}
+
+      Map.put(proof, next_line, step)
+    else
+      {:error, :proof_failed}
+    end
+  end
+
+  defp prove_disjunction(proof, {:or, [left, right]} = conclusion) do
+    line_proving_left = evidence_for(proof, left)
+    line_proving_right = evidence_for(proof, right)
+    next_line = next_line(proof)
+
+    if line_proving_left || line_proving_right do
+      step =
+        {Parser.print!(conclusion), :disjunction_introduction,
+         [line_proving_left || line_proving_right]}
+
+      Map.put(proof, next_line, step)
+    else
+      {:error, :proof_failed}
+    end
+  end
+
+  defp evidence_for(proof, conclusion) do
+    Enum.find_value(proof, fn {line, {statement, _reason}} ->
+      if statement == conclusion, do: line, else: nil
+    end)
+  end
+
+  defp next_line(proof) do
+    proof
+    |> Map.keys()
+    |> Enum.max()
+    |> Kernel.+(1)
   end
 
   defp parse(string) do
