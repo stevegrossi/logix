@@ -55,7 +55,7 @@ You can assume anything, but assumptions introduce a new scope. Nothing proven w
 
 #### Repetition
 
-If you have "X", then you're entitled to "X". But why?
+If you have "X", then you're entitled to "X". Perhaps useful to repeating assumptions when proving lemmas.
 
 #### Implication Introduction
 

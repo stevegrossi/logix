@@ -155,9 +155,7 @@ defmodule QuineTest do
     end
 
     test "proves simple conjunctions" do
-      result = Quine.prove(["A", "B"], "A^B")
-
-      assert result == %{
+      assert Quine.prove(["A", "B"], "A^B") == %{
                1 => {"A", :premise},
                2 => {"B", :premise},
                3 => {"A^B", :conjunction_introduction, [1, 2]}
@@ -165,11 +163,31 @@ defmodule QuineTest do
     end
 
     test "proves simple disjunctions" do
-      result = Quine.prove(["A"], "AvB")
-
-      assert result == %{
+      assert Quine.prove(["A"], "AvB") == %{
                1 => {"A", :premise},
                2 => {"AvB", :disjunction_introduction, [1]}
+             }
+    end
+
+    test "proves by implication elimination" do
+      assert Quine.prove(["A", "A->B"], "B") == %{
+               1 => {"A", :premise},
+               2 => {"A->B", :premise},
+               3 => {"B", :implication_elimination, [1, 2]}
+             }
+    end
+
+    test "proves by biconditional elimination" do
+      assert Quine.prove(["A", "A<->B"], "B") == %{
+               1 => {"A", :premise},
+               2 => {"A<->B", :premise},
+               3 => {"B", :biconditional_elimination, [1, 2]}
+             }
+
+      assert Quine.prove(["A", "B<->A"], "B") == %{
+               1 => {"A", :premise},
+               2 => {"B<->A", :premise},
+               3 => {"B", :biconditional_elimination, [1, 2]}
              }
     end
   end

@@ -6,6 +6,8 @@ defmodule Quine do
   alias Quine.Parser
   alias Quine.Evaluator
 
+  @failure {:error, :proof_failed}
+
   @doc "Determines the truth value of an expression given a model of its sentences"
   def evaluate(expression, truth_values) do
     expression
@@ -69,7 +71,7 @@ defmodule Quine do
       %{
         1 => {"A", :premise},
         2 => {"A->B", :premise},
-        3 => {"B", {:implication_elimination, [1, 2]}}
+        3 => {"B", :implication_elimination, [1, 2]}
       }
 
   """
@@ -79,9 +81,10 @@ defmodule Quine do
     proof = initialize_proof_with_premises(parsed_premises)
 
     case parsed_conclusion do
+      sentence when is_binary(sentence) -> prove_by_elimination(proof, parsed_conclusion)
       {:and, _} -> prove_conjunction(proof, parsed_conclusion)
       {:or, _} -> prove_disjunction(proof, parsed_conclusion)
-      _ -> {:error, :proof_failed}
+      _ -> @failure
     end
   end
 
@@ -93,41 +96,125 @@ defmodule Quine do
     end)
   end
 
+  defp prove_by_elimination(proof, conclusion) when is_binary(conclusion) do
+    # TRY:
+    # Negation Elimination
+    # ✅ Implication Elimination
+    # Disjunction Elimination
+    # Conjunction Elimination
+    # ✅ Biconditional Elimination
+    try_implication_elimination(proof, conclusion) ||
+      try_biconditional_elimination(proof, conclusion) ||
+      @failure
+  end
+
+  # Once we start proving more than just sentences...
+  # defp prove_by_elimination(_proof, _conclusion), do: @failure
+
+  defp try_implication_elimination(proof, conclusion) do
+    line_implying_conclusion =
+      Enum.find_value(proof, fn {line, {statement, _reason}} ->
+        case parse(statement) do
+          {:if, [_left, ^conclusion]} -> line
+          _ -> nil
+        end
+      end)
+
+    if line_implying_conclusion do
+      {:if, [left, _conclusion]} =
+        proof
+        |> Map.get(line_implying_conclusion)
+        |> elem(0)
+        |> parse()
+
+      case evidence_for(proof, left) do
+        nil ->
+          nil
+
+        line ->
+          step =
+            {Parser.print!(conclusion), :implication_elimination,
+             [line, line_implying_conclusion]}
+
+          Map.put(proof, next_line(proof), step)
+      end
+    else
+      nil
+    end
+  end
+
+  defp try_biconditional_elimination(proof, conclusion) do
+    line_implying_conclusion =
+      Enum.find_value(proof, fn {line, {statement, _reason}} ->
+        case parse(statement) do
+          {:iff, [_left, ^conclusion]} -> line
+          {:iff, [^conclusion, _right]} -> line
+          _ -> nil
+        end
+      end)
+
+    if line_implying_conclusion do
+      biconditional_implying_conclusion =
+        proof
+        |> Map.get(line_implying_conclusion)
+        |> elem(0)
+        |> parse()
+
+      needed =
+        case biconditional_implying_conclusion do
+          {:iff, [left, ^conclusion]} -> left
+          {:iff, [^conclusion, right]} -> right
+        end
+
+      case evidence_for(proof, needed) do
+        nil ->
+          nil
+
+        line ->
+          step =
+            {Parser.print!(conclusion), :biconditional_elimination,
+             [line, line_implying_conclusion]}
+
+          Map.put(proof, next_line(proof), step)
+      end
+    else
+      nil
+    end
+  end
+
   defp prove_conjunction(proof, {:and, [left, right]} = conclusion) do
     line_proving_left = evidence_for(proof, left)
     line_proving_right = evidence_for(proof, right)
-    next_line = next_line(proof)
 
     if line_proving_left && line_proving_right do
       step =
         {Parser.print!(conclusion), :conjunction_introduction,
          [line_proving_left, line_proving_right]}
 
-      Map.put(proof, next_line, step)
+      Map.put(proof, next_line(proof), step)
     else
-      {:error, :proof_failed}
+      @failure
     end
   end
 
   defp prove_disjunction(proof, {:or, [left, right]} = conclusion) do
     line_proving_left = evidence_for(proof, left)
     line_proving_right = evidence_for(proof, right)
-    next_line = next_line(proof)
 
     if line_proving_left || line_proving_right do
       step =
         {Parser.print!(conclusion), :disjunction_introduction,
          [line_proving_left || line_proving_right]}
 
-      Map.put(proof, next_line, step)
+      Map.put(proof, next_line(proof), step)
     else
-      {:error, :proof_failed}
+      @failure
     end
   end
 
   defp evidence_for(proof, conclusion) do
     Enum.find_value(proof, fn {line, {statement, _reason}} ->
-      if statement == conclusion, do: line, else: nil
+      if statement == conclusion, do: line
     end)
   end
 
