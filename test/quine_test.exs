@@ -150,10 +150,6 @@ defmodule QuineTest do
   end
 
   describe "prove/2" do
-    test "returns an error when proving fails" do
-      assert Quine.prove(["A"], "A^B") == {:error, :proof_failed}
-    end
-
     test "proves simple conjunctions" do
       assert Quine.prove(["A", "B"], "A^B") == %{
                1 => {"A", :premise},

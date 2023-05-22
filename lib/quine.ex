@@ -74,6 +74,9 @@ defmodule Quine do
         3 => {"B", {:implication_elimination, [1, 2]}}
       }
 
+      iex> Quine.prove(["A"], "B")
+      {:error, :proof_failed}
+
   """
   def prove(premises, conclusion) do
     parsed_premises = Enum.map(premises, &parse/1)
