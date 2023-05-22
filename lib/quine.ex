@@ -71,7 +71,7 @@ defmodule Quine do
       %{
         1 => {"A", :premise},
         2 => {"A->B", :premise},
-        3 => {"B", :implication_elimination, [1, 2]}
+        3 => {"B", {:implication_elimination, [1, 2]}}
       }
 
   """
@@ -133,10 +133,10 @@ defmodule Quine do
 
         line ->
           step =
-            {Parser.print!(conclusion), :implication_elimination,
-             [line, line_implying_conclusion]}
+            {Parser.print!(conclusion),
+             {:implication_elimination, [line, line_implying_conclusion]}}
 
-          Map.put(proof, next_line(proof), step)
+          add_line_to_proof(proof, step)
       end
     else
       nil
@@ -172,10 +172,10 @@ defmodule Quine do
 
         line ->
           step =
-            {Parser.print!(conclusion), :biconditional_elimination,
-             [line, line_implying_conclusion]}
+            {Parser.print!(conclusion),
+             {:biconditional_elimination, [line, line_implying_conclusion]}}
 
-          Map.put(proof, next_line(proof), step)
+          add_line_to_proof(proof, step)
       end
     else
       nil
@@ -188,10 +188,10 @@ defmodule Quine do
 
     if line_proving_left && line_proving_right do
       step =
-        {Parser.print!(conclusion), :conjunction_introduction,
-         [line_proving_left, line_proving_right]}
+        {Parser.print!(conclusion),
+         {:conjunction_introduction, [line_proving_left, line_proving_right]}}
 
-      Map.put(proof, next_line(proof), step)
+      add_line_to_proof(proof, step)
     else
       @failure
     end
@@ -203,10 +203,10 @@ defmodule Quine do
 
     if line_proving_left || line_proving_right do
       step =
-        {Parser.print!(conclusion), :disjunction_introduction,
-         [line_proving_left || line_proving_right]}
+        {Parser.print!(conclusion),
+         {:disjunction_introduction, [line_proving_left || line_proving_right]}}
 
-      Map.put(proof, next_line(proof), step)
+      add_line_to_proof(proof, step)
     else
       @failure
     end
@@ -218,7 +218,11 @@ defmodule Quine do
     end)
   end
 
-  defp next_line(proof) do
+  defp add_line_to_proof(proof, step) do
+    Map.put(proof, next_line_number(proof), step)
+  end
+
+  defp next_line_number(proof) do
     proof
     |> Map.keys()
     |> Enum.max()
