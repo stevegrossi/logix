@@ -151,62 +151,78 @@ defmodule QuineTest do
 
   describe "prove/2" do
     test "proves simple conjunctions" do
-      assert Quine.prove(["A", "B"], "A^B") == %{
-               1 => {"A", :premise},
-               2 => {"B", :premise},
-               3 => {"A^B", {:conjunction_introduction, [1, 2]}}
-             }
+      assert Quine.prove(["A", "B"], "A^B") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"B", :premise},
+                  3 => {"A^B", {:conjunction_introduction, [1, 2]}}
+                }}
     end
 
     test "proves simple disjunctions" do
-      assert Quine.prove(["A"], "AvB") == %{
-               1 => {"A", :premise},
-               2 => {"AvB", {:disjunction_introduction, [1]}}
-             }
+      assert Quine.prove(["A"], "AvB") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"AvB", {:disjunction_introduction, [1]}}
+                }}
     end
 
     test "proves by implication elimination" do
-      assert Quine.prove(["A", "A->B"], "B") == %{
-               1 => {"A", :premise},
-               2 => {"A->B", :premise},
-               3 => {"B", {:implication_elimination, [1, 2]}}
-             }
+      assert Quine.prove(["A", "A->B"], "B") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"A->B", :premise},
+                  3 => {"B", {:implication_elimination, [1, 2]}}
+                }}
     end
 
     test "proves by biconditional elimination" do
-      assert Quine.prove(["A", "A<->B"], "B") == %{
-               1 => {"A", :premise},
-               2 => {"A<->B", :premise},
-               3 => {"B", {:biconditional_elimination, [1, 2]}}
-             }
+      assert Quine.prove(["A", "A<->B"], "B") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"A<->B", :premise},
+                  3 => {"B", {:biconditional_elimination, [1, 2]}}
+                }}
 
-      assert Quine.prove(["A", "B<->A"], "B") == %{
-               1 => {"A", :premise},
-               2 => {"B<->A", :premise},
-               3 => {"B", {:biconditional_elimination, [1, 2]}}
-             }
+      assert Quine.prove(["A", "B<->A"], "B") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"B<->A", :premise},
+                  3 => {"B", {:biconditional_elimination, [1, 2]}}
+                }}
     end
 
     test "proves by conjunction elimination" do
-      assert Quine.prove(["A^B"], "A") == %{
-               1 => {"A^B", :premise},
-               2 => {"A", {:conjunction_elimination, [1]}}
-             }
+      assert Quine.prove(["A^B"], "A") ==
+               {:ok,
+                %{
+                  1 => {"A^B", :premise},
+                  2 => {"A", {:conjunction_elimination, [1]}}
+                }}
 
-      assert Quine.prove(["A^B"], "B") == %{
-               1 => {"A^B", :premise},
-               2 => {"B", {:conjunction_elimination, [1]}}
-             }
+      assert Quine.prove(["A^B"], "B") ==
+               {:ok,
+                %{
+                  1 => {"A^B", :premise},
+                  2 => {"B", {:conjunction_elimination, [1]}}
+                }}
     end
 
     test "proves by disjunction elimination" do
-      assert Quine.prove(["AvB", "A->C", "B->C", "D->C"], "C") == %{
-               1 => {"AvB", :premise},
-               2 => {"A->C", :premise},
-               3 => {"B->C", :premise},
-               4 => {"D->C", :premise},
-               5 => {"C", {:disjunction_elimination, [1, 2, 3]}}
-             }
+      assert Quine.prove(["AvB", "A->C", "B->C", "D->C"], "C") ==
+               {:ok,
+                %{
+                  1 => {"AvB", :premise},
+                  2 => {"A->C", :premise},
+                  3 => {"B->C", :premise},
+                  4 => {"D->C", :premise},
+                  5 => {"C", {:disjunction_elimination, [1, 2, 3]}}
+                }}
     end
   end
 end
