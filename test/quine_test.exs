@@ -158,6 +158,14 @@ defmodule QuineTest do
                   2 => {"B", :premise},
                   3 => {"A^B", {:conjunction_introduction, [1, 2]}}
                 }}
+
+      assert Quine.prove(["A", "BvC"], "A^(BvC)") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"BvC", :premise},
+                  3 => {"A^(BvC)", {:conjunction_introduction, [1, 2]}}
+                }}
     end
 
     test "proves simple disjunctions" do
@@ -166,6 +174,13 @@ defmodule QuineTest do
                 %{
                   1 => {"A", :premise},
                   2 => {"AvB", {:disjunction_introduction, [1]}}
+                }}
+
+      assert Quine.prove(["~(A^B)"], "(~(A^B))v(C^D)") ==
+               {:ok,
+                %{
+                  1 => {"~(A^B)", :premise},
+                  2 => {"(~(A^B))v(C^D)", {:disjunction_introduction, [1]}}
                 }}
     end
 
@@ -176,6 +191,14 @@ defmodule QuineTest do
                   1 => {"A", :premise},
                   2 => {"A->B", :premise},
                   3 => {"B", {:implication_elimination, [1, 2]}}
+                }}
+
+      assert Quine.prove(["~(A^B)", "~(A^B)->C"], "C") ==
+               {:ok,
+                %{
+                  1 => {"~(A^B)", :premise},
+                  2 => {"(~(A^B))->C", :premise},
+                  3 => {"C", {:implication_elimination, [1, 2]}}
                 }}
     end
 

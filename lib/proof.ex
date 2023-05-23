@@ -210,8 +210,8 @@ defmodule Quine.Proof do
   end
 
   defp evidence_for(proof, expression) do
-    Enum.find_value(proof.steps, fn {line, {body, _reason}} ->
-      if body == expression, do: line
+    Enum.find_value(proof.steps, fn {line, {result, _reason}} ->
+      if result == expression, do: line
     end)
   end
 
