@@ -21,11 +21,13 @@ defmodule Quine.Proof do
     })
   end
 
-  def prove(proof) do
-    case proof.conclusion do
+  def prove(proof), do: prove(proof, proof.conclusion)
+
+  def prove(proof, conclusion) do
+    case conclusion do
       sentence when is_binary(sentence) -> prove_by_elimination(proof, sentence)
-      {:and, _} -> prove_conjunction(proof, proof.conclusion)
-      {:or, _} -> prove_disjunction(proof, proof.conclusion)
+      {:and, _} -> prove_conjunction(proof, conclusion)
+      {:or, _} -> prove_disjunction(proof, conclusion)
       _ -> @failure
     end
   end
@@ -53,7 +55,8 @@ defmodule Quine.Proof do
       {:ok,
        add_line(
          proof,
-         {conclusion, {:conjunction_introduction, [line_proving_left, line_proving_right]}}
+         {conclusion,
+          {:conjunction_introduction, [elem(line_proving_left, 0), elem(line_proving_right, 0)]}}
        )}
     else
       @failure
@@ -68,8 +71,8 @@ defmodule Quine.Proof do
       nil ->
         @failure
 
-      evidence ->
-        {:ok, add_line(proof, {conclusion, {:disjunction_introduction, [evidence]}})}
+      {line, _} ->
+        {:ok, add_line(proof, {conclusion, {:disjunction_introduction, [line]}})}
     end
   end
 
@@ -160,7 +163,7 @@ defmodule Quine.Proof do
           nil ->
             nil
 
-          line ->
+          {line, _} ->
             {:ok,
              add_line(
                proof,
@@ -186,7 +189,7 @@ defmodule Quine.Proof do
           nil ->
             nil
 
-          line ->
+          {line, _} ->
             {:ok,
              add_line(
                proof,
@@ -209,10 +212,14 @@ defmodule Quine.Proof do
     end)
   end
 
-  defp evidence_for(proof, expression) do
-    Enum.find_value(proof.steps, fn {line, {result, _reason}} ->
-      if result == expression, do: line
+  # Returns the step in the proof that resulted in the given expression, if present.
+  defp evidence_for(proof, conclusion) do
+    # Find the line supporting the conclusion if it exists...
+    Enum.find(proof.steps, fn {_line, {result, _reason}} ->
+      result == conclusion
     end)
+
+    # ...or else prove it
   end
 
   defp find_implication_concluding(proof, conclusion) do
