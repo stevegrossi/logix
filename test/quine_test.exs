@@ -232,6 +232,16 @@ defmodule QuineTest do
                 }}
     end
 
+    test "proves by biconditional introduction" do
+      assert Quine.prove(["A->B", "B->A"], "A<->B") ==
+               {:ok,
+                %{
+                  1 => {"A->B", :premise},
+                  2 => {"B->A", :premise},
+                  3 => {"A<->B", {:biconditional_introduction, [1, 2]}}
+                }}
+    end
+
     test "proves by conjunction elimination" do
       assert Quine.prove(["A^B"], "A") ==
                {:ok,

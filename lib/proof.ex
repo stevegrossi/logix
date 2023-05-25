@@ -36,6 +36,7 @@ defmodule Quine.Proof do
         sentence when is_binary(sentence) -> prove_by_elimination(proof, sentence)
         {:and, _} -> prove_conjunction(proof, conclusion)
         {:or, _} -> prove_disjunction(proof, conclusion)
+        {:iff, _} -> prove_biconditional(proof, conclusion)
         _ -> @failure
       end
     end
@@ -85,6 +86,22 @@ defmodule Quine.Proof do
 
       {line, _} ->
         {:ok, add_line(proof, {conclusion, {:disjunction_introduction, [line]}})}
+    end
+  end
+
+  @spec prove_biconditional(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
+  defp prove_biconditional(proof, {:iff, [left, right]} = conclusion) do
+    with {:ok, proof} <- prove(proof, {:if, [left, right]}),
+         {:ok, proof} <- prove(proof, {:if, [right, left]}) do
+      {left_implying_right, _} = evidence_for(proof, {:if, [left, right]})
+      {right_implying_left, _} = evidence_for(proof, {:if, [right, left]})
+
+      {:ok,
+       add_line(
+         proof,
+         {conclusion,
+          {:biconditional_introduction, Enum.sort([left_implying_right, right_implying_left])}}
+       )}
     end
   end
 

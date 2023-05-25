@@ -105,8 +105,7 @@ Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're en
 - **biconditional**: Biconditional Introduction, any
 
 ### TODO
-
-- Biconditional Introduction
+- Make all the existing simple proof tests more complex
 - prove by assumption strategy (with repetition?)
   - Implication Introduction
   - Negation Introduction
