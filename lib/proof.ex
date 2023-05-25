@@ -10,8 +10,11 @@ defmodule Quine.Proof do
 
   alias Quine.Parser
 
+  @type t :: %__MODULE__{}
+
   @failure {:error, :proof_failed}
 
+  @spec new(list(), term()) :: t()
   def new(premises, conclusion) do
     initialize_steps(%__MODULE__{
       premises: premises,
@@ -21,9 +24,11 @@ defmodule Quine.Proof do
     })
   end
 
+  @spec prove(t()) :: {:ok, t()} | {:error, :proof_failed}
   def prove(proof), do: prove(proof, proof.conclusion)
 
-  def prove(proof, conclusion) do
+  @spec prove(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
+  defp prove(proof, conclusion) do
     case conclusion do
       sentence when is_binary(sentence) -> prove_by_elimination(proof, sentence)
       {:and, _} -> prove_conjunction(proof, conclusion)
@@ -32,12 +37,14 @@ defmodule Quine.Proof do
     end
   end
 
+  @spec format(t()) :: map()
   def format(proof) do
     Map.new(proof.steps, fn {step, {statement, reason}} ->
       {step, {Parser.print!(statement), reason}}
     end)
   end
 
+  @spec initialize_steps(t()) :: t()
   defp initialize_steps(proof) do
     steps =
       proof.premises
@@ -47,6 +54,7 @@ defmodule Quine.Proof do
     Map.merge(proof, %{steps: steps, next_step: map_size(steps) + 1})
   end
 
+  @spec prove_conjunction(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
   defp prove_conjunction(proof, {:and, [left, right]} = conclusion) do
     line_proving_left = evidence_for(proof, left)
     line_proving_right = evidence_for(proof, right)
@@ -63,6 +71,7 @@ defmodule Quine.Proof do
     end
   end
 
+  @spec prove_disjunction(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
   defp prove_disjunction(proof, {:or, [left, right]} = conclusion) do
     line_proving_left = evidence_for(proof, left)
     line_proving_right = evidence_for(proof, right)
@@ -76,6 +85,7 @@ defmodule Quine.Proof do
     end
   end
 
+  @spec prove_by_elimination(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
   defp prove_by_elimination(proof, conclusion) when is_binary(conclusion) do
     # TRY:
     # Negation Elimination
