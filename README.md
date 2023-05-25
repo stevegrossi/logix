@@ -42,8 +42,6 @@ Quine.equivalent?("A->B", "AvB")
 
 ## Eventually...
 
-- Derive proofs of conclusions from a set of assumptions, e.g. `Quine.prove(["A", "A->B"], "B")`
-- take efficiency into account and return the most efficient proof
 - derive logical truths (i.e. `A->A`, `B v ~B`) from 0 assumptions
 
 ## Addenda

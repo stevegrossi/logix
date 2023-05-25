@@ -68,12 +68,16 @@ defmodule Quine do
 
   ## Examples
 
-      iex> Quine.prove(["A", "A->B"], "B")
-      {:ok, %{
-        1 => {"A", :premise},
-        2 => {"A->B", :premise},
-        3 => {"B", {:implication_elimination, [1, 2]}}
-      }}
+      iex> Quine.prove(["A", "BvC", "B->D", "C->D"], "A^D")
+      {:ok,
+        %{
+          1 => {"A", :premise},
+          2 => {"BvC", :premise},
+          3 => {"B->D", :premise},
+          4 => {"C->D", :premise},
+          5 => {"D", {:disjunction_elimination, [2, 3, 4]}},
+          6 => {"A^D", {:conjunction_introduction, [1, 5]}}
+        }}
 
       iex> Quine.prove(["A"], "B")
       {:error, :proof_failed}

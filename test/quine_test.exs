@@ -168,6 +168,18 @@ defmodule QuineTest do
                 }}
     end
 
+    test "proves conjunctions with multiple steps" do
+      assert Quine.prove(["A", "B", "C"], "(A^B)^C") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"B", :premise},
+                  3 => {"C", :premise},
+                  4 => {"A^B", {:conjunction_introduction, [1, 2]}},
+                  5 => {"(A^B)^C", {:conjunction_introduction, [3, 4]}}
+                }}
+    end
+
     test "proves simple disjunctions" do
       assert Quine.prove(["A"], "AvB") ==
                {:ok,

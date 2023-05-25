@@ -29,11 +29,15 @@ defmodule Quine.Proof do
 
   @spec prove(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
   defp prove(proof, conclusion) do
-    case conclusion do
-      sentence when is_binary(sentence) -> prove_by_elimination(proof, sentence)
-      {:and, _} -> prove_conjunction(proof, conclusion)
-      {:or, _} -> prove_disjunction(proof, conclusion)
-      _ -> @failure
+    if evidence_for(proof, conclusion) do
+      {:ok, proof}
+    else
+      case conclusion do
+        sentence when is_binary(sentence) -> prove_by_elimination(proof, sentence)
+        {:and, _} -> prove_conjunction(proof, conclusion)
+        {:or, _} -> prove_disjunction(proof, conclusion)
+        _ -> @failure
+      end
     end
   end
 
@@ -56,18 +60,17 @@ defmodule Quine.Proof do
 
   @spec prove_conjunction(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
   defp prove_conjunction(proof, {:and, [left, right]} = conclusion) do
-    line_proving_left = evidence_for(proof, left)
-    line_proving_right = evidence_for(proof, right)
+    with {:ok, proof} <- prove(proof, left),
+         {:ok, proof} <- prove(proof, right) do
+      {line_proving_left, _} = evidence_for(proof, left)
+      {line_proving_right, _} = evidence_for(proof, right)
 
-    if line_proving_left && line_proving_right do
       {:ok,
        add_line(
          proof,
          {conclusion,
-          {:conjunction_introduction, [elem(line_proving_left, 0), elem(line_proving_right, 0)]}}
+          {:conjunction_introduction, Enum.sort([line_proving_left, line_proving_right])}}
        )}
-    else
-      @failure
     end
   end
 
@@ -87,12 +90,7 @@ defmodule Quine.Proof do
 
   @spec prove_by_elimination(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
   defp prove_by_elimination(proof, conclusion) when is_binary(conclusion) do
-    # TRY:
-    # Negation Elimination
-    # ✅ Implication Elimination
-    # ✅ Disjunction Elimination
-    # ✅ Conjunction Elimination
-    # ✅ Biconditional Elimination
+    # TODO: Negation Elimination
     try_conjunction_elimination(proof, conclusion) ||
       try_disjunction_elimination(proof, conclusion) ||
       try_implication_elimination(proof, conclusion) ||
@@ -222,14 +220,10 @@ defmodule Quine.Proof do
     end)
   end
 
-  # Returns the step in the proof that resulted in the given expression, if present.
   defp evidence_for(proof, conclusion) do
-    # Find the line supporting the conclusion if it exists...
     Enum.find(proof.steps, fn {_line, {result, _reason}} ->
       result == conclusion
     end)
-
-    # ...or else prove it
   end
 
   defp find_implication_concluding(proof, conclusion) do
