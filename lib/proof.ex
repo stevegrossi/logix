@@ -77,15 +77,22 @@ defmodule Quine.Proof do
 
   @spec prove_disjunction(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
   defp prove_disjunction(proof, {:or, [left, right]} = conclusion) do
-    line_proving_left = evidence_for(proof, left)
-    line_proving_right = evidence_for(proof, right)
+    case prove(proof, left) do
+      {:ok, proof} ->
+        {line_proving_left, _} = evidence_for(proof, left)
+        {:ok, add_line(proof, {conclusion, {:disjunction_introduction, [line_proving_left]}})}
 
-    case line_proving_left || line_proving_right do
-      nil ->
-        @failure
+      @failure ->
+        case prove(proof, right) do
+          {:ok, proof} ->
+            {line_proving_right, _} = evidence_for(proof, right)
 
-      {line, _} ->
-        {:ok, add_line(proof, {conclusion, {:disjunction_introduction, [line]}})}
+            {:ok,
+             add_line(proof, {conclusion, {:disjunction_introduction, [line_proving_right]}})}
+
+          @failure ->
+            @failure
+        end
     end
   end
 

@@ -196,6 +196,16 @@ defmodule QuineTest do
                 }}
     end
 
+    test "proves disjunctions with multiple steps" do
+      assert Quine.prove(["A"], "(AvB)vC") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"AvB", {:disjunction_introduction, [1]}},
+                  3 => {"(AvB)vC", {:disjunction_introduction, [2]}}
+                }}
+    end
+
     test "proves by implication elimination" do
       assert Quine.prove(["A", "A->B"], "B") ==
                {:ok,
