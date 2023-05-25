@@ -95,6 +95,24 @@ This rule requires you to prove something within the scope of an assumption. If 
 
 Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're entitled to "X" outside the scope of that assumption.
 
+### Strategies for Proving Kinds of Statements
+
+- **any**: Negation Elimination, Implication Elimination, Disjunction Elimination, Conjunction Elimination, Biconditional Elimination
+- **negation**: Negation Introduction, any
+- **disjunction**: Disjunction Introduction, any
+- **conjunction**: Conjunction Introduction, any
+- **implication**: Implication Introduction, any
+- **biconditional**: Biconditional Introduction, any
+
+### TODO
+
+- Biconditional Introduction
+- prove by assumption strategy (with repetition?)
+  - Implication Introduction
+  - Negation Introduction
+  - Negation Elimination
+- edge case: what if asked to prove a premise? use repetition or just leave it?
+
 ### References
 
 - https://people.cs.pitt.edu/~milos/courses/cs441/lectures/Class2.pdf

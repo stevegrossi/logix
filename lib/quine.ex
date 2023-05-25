@@ -7,8 +7,6 @@ defmodule Quine do
   alias Quine.Parser
   alias Quine.Proof
 
-  @failure {:error, :proof_failed}
-
   @doc "Determines the truth value of an expression given a model of its sentences"
   def evaluate(expression, truth_values) do
     expression
