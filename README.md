@@ -105,13 +105,12 @@ Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're en
 - **biconditional**: Biconditional Introduction, any
 
 ### TODO
-- Make all the existing simple proof tests more complex
-- prove by assumption strategy (with repetition?)
-  - Implication Introduction
-  - Negation Introduction
-  - Negation Elimination
-- edge case: what if asked to prove a premise? use repetition or just leave it?
+- [ ] Enhance the proof-by-elimination strategies to prove their own requirements
+- [ ] Implement the proof-by-assumption strategies: implication introduction, negation introduction, and negation elimination
+- [ ] Could things be simpler if sentences were tagged? e.g. `{:sentence, "A"}` instead of bare strings
 
 ### References
 
+- [Mathematical Logic Through Python](https://www.logicthrupython.org/)
 - https://people.cs.pitt.edu/~milos/courses/cs441/lectures/Class2.pdf
+- [An online theorem prover](http://teachinglogic.liglab.fr/DN/index.php?formula=p+%26+%28q+%2B+r%29+%3C%3D%3E+%28p+%26+q%29+%2B+%28p+%26+r%29&action=Prove+Formula), the closest (and only) example I've been able to find of software that does what Quine sets out to do
