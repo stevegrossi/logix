@@ -191,16 +191,19 @@ defmodule Quine.Proof do
       {line_implying_conclusion, {implication, _reason}} ->
         {:if, [antecedent, ^conclusion]} = implication
 
-        case evidence_for(proof, antecedent) do
-          nil ->
-            nil
+        case prove(proof, antecedent) do
+          {:ok, proof} ->
+            {line, _} = evidence_for(proof, antecedent)
 
-          {line, _} ->
             {:ok,
              add_line(
                proof,
-               {conclusion, {:implication_elimination, [line, line_implying_conclusion]}}
+               {conclusion,
+                {:implication_elimination, Enum.sort([line, line_implying_conclusion])}}
              )}
+
+          @failure ->
+            @failure
         end
 
       nil ->
@@ -217,16 +220,19 @@ defmodule Quine.Proof do
             {:iff, [^conclusion, right]} -> right
           end
 
-        case evidence_for(proof, needed) do
-          nil ->
-            nil
+        case prove(proof, needed) do
+          {:ok, proof} ->
+            {line, _} = evidence_for(proof, needed)
 
-          {line, _} ->
             {:ok,
              add_line(
                proof,
-               {conclusion, {:biconditional_elimination, [line, line_implying_conclusion]}}
+               {conclusion,
+                {:biconditional_elimination, Enum.sort([line, line_implying_conclusion])}}
              )}
+
+          @failure ->
+            @failure
         end
 
       nil ->

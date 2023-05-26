@@ -224,6 +224,18 @@ defmodule QuineTest do
                 }}
     end
 
+    test "proves by implication elimination with other steps" do
+      assert Quine.prove(["A", "B", "(A^B)->C"], "C") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"B", :premise},
+                  3 => {"(A^B)->C", :premise},
+                  4 => {"A^B", {:conjunction_introduction, [1, 2]}},
+                  5 => {"C", {:implication_elimination, [3, 4]}}
+                }}
+    end
+
     test "proves by biconditional elimination" do
       assert Quine.prove(["A", "A<->B"], "B") ==
                {:ok,
@@ -233,12 +245,24 @@ defmodule QuineTest do
                   3 => {"B", {:biconditional_elimination, [1, 2]}}
                 }}
 
-      assert Quine.prove(["A", "B<->A"], "B") ==
+      assert Quine.prove(["B", "A<->B"], "A") ==
+               {:ok,
+                %{
+                  1 => {"B", :premise},
+                  2 => {"A<->B", :premise},
+                  3 => {"A", {:biconditional_elimination, [1, 2]}}
+                }}
+    end
+
+    test "proves by biconditional elimination with other steps" do
+      assert Quine.prove(["A", "A->B", "B<->C"], "C") ==
                {:ok,
                 %{
                   1 => {"A", :premise},
-                  2 => {"B<->A", :premise},
-                  3 => {"B", {:biconditional_elimination, [1, 2]}}
+                  2 => {"A->B", :premise},
+                  3 => {"B<->C", :premise},
+                  4 => {"B", {:implication_elimination, [1, 2]}},
+                  5 => {"C", {:biconditional_elimination, [3, 4]}}
                 }}
     end
 
