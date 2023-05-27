@@ -302,6 +302,17 @@ defmodule QuineTest do
                 }}
     end
 
+    test "proves by conjunction elimination with other steps" do
+      assert Quine.prove(["A", "A->(B^C)"], "C") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"A->(B^C)", :premise},
+                  3 => {"B^C", {:implication_elimination, [1, 2]}},
+                  4 => {"C", {:conjunction_elimination, [3]}}
+                }}
+    end
+
     test "proves by disjunction elimination" do
       assert Quine.prove(["AvB", "A->C", "B->C", "D->C"], "C") ==
                {:ok,

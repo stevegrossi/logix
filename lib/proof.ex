@@ -33,13 +33,13 @@ defmodule Quine.Proof do
       {:ok, proof}
     else
       # TODO: make this a pipeline
-      try_conjunction_introduction(proof, conclusion) ||
-        try_disjunction_introduction(proof, conclusion) ||
-        try_biconditional_introduction(proof, conclusion) ||
+      try_implication_elimination(proof, conclusion) ||
         try_conjunction_elimination(proof, conclusion) ||
         try_disjunction_elimination(proof, conclusion) ||
-        try_implication_elimination(proof, conclusion) ||
         try_biconditional_elimination(proof, conclusion) ||
+        try_conjunction_introduction(proof, conclusion) ||
+        try_disjunction_introduction(proof, conclusion) ||
+        try_biconditional_introduction(proof, conclusion) ||
         @failure
     end
   end
@@ -119,22 +119,47 @@ defmodule Quine.Proof do
 
   @spec try_conjunction_elimination(t(), any()) :: {:ok, t()} | nil
   defp try_conjunction_elimination(proof, conclusion) do
-    case find_conjunction_including(proof, conclusion) do
-      {line, _conjunction} ->
-        {:ok, conclude(proof, conclusion, :conjunction_elimination, [line])}
+    case find_line_including_conjunct(proof, conclusion) do
+      {_, {statement_with_conjunction, _reason}} ->
+        conjunction = find_conjunction_anywhere(statement_with_conjunction, conclusion)
+
+        case prove(proof, conjunction) do
+          {:ok, proof} ->
+            {line, _} = evidence_for(proof, conjunction)
+            {:ok, conclude(proof, conclusion, :conjunction_elimination, [line])}
+
+          @failure ->
+            nil
+        end
 
       nil ->
         nil
     end
   end
 
-  defp find_conjunction_including(proof, conclusion) do
-    Enum.find(proof.steps, fn {_line, {statement, _justification}} ->
-      case statement do
-        {:and, [^conclusion, _right]} -> true
-        {:and, [_left, ^conclusion]} -> true
-        _ -> false
-      end
+  # defp find_anywhere(expression, expression), do: expression
+  # defp find_anywhere(expression, _) when is_binary(expression), do: nil
+
+  # defp find_anywhere({_op, factors}, expression) do
+  #   # Negations don't have a list as their second tuple element (yet)
+  #   Enum.find(factors, &find_anywhere(&1, expression))
+  # end
+
+  @spec find_conjunction_anywhere(binary | {any, any}, any) :: any
+  defp find_conjunction_anywhere(statement, _conclusion) when is_binary(statement), do: nil
+
+  defp find_conjunction_anywhere({:and, conjuncts} = statement, conclusion) do
+    # TODO: shouldn't fail before checking other conjunctions?
+    if conclusion in conjuncts, do: statement
+  end
+
+  defp find_conjunction_anywhere({_operator, conjuncts}, conclusion) do
+    Enum.find(conjuncts, &find_conjunction_anywhere(&1, conclusion))
+  end
+
+  defp find_line_including_conjunct(proof, conclusion) do
+    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+      find_conjunction_anywhere(statement, conclusion)
     end)
   end
 
@@ -153,7 +178,7 @@ defmodule Quine.Proof do
             nil
 
           {disjunction_line, {{:or, disjuncts}, _justification}} ->
-            # need to filter implication_lines by the ones in the disjunction
+            # we first filter implication_lines by the ones in the disjunction
             relevant_implication_lines =
               implication_lines
               |> Enum.filter(fn implication_line ->
