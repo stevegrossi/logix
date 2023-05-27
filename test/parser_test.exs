@@ -8,7 +8,7 @@ defmodule Quine.ParserTest do
     end
 
     test "parses negations" do
-      assert Parser.parse("~A") == {:ok, {:not, "A"}}
+      assert Parser.parse("~A") == {:ok, {:not, ["A"]}}
     end
 
     test "parses disjunctions" do
@@ -29,12 +29,12 @@ defmodule Quine.ParserTest do
 
     test "parses groups" do
       assert Parser.parse("(((((A)))))") == {:ok, "A"}
-      assert Parser.parse("~(A^B)") == {:ok, {:not, {:and, ["A", "B"]}}}
+      assert Parser.parse("~(A^B)") == {:ok, {:not, [{:and, ["A", "B"]}]}}
       assert Parser.parse("(A^B)v(C^D)") == {:ok, {:or, [{:and, ["A", "B"]}, {:and, ["C", "D"]}]}}
-      assert Parser.parse("(A^B)->~C") == {:ok, {:if, [{:and, ["A", "B"]}, {:not, "C"}]}}
+      assert Parser.parse("(A^B)->~C") == {:ok, {:if, [{:and, ["A", "B"]}, {:not, ["C"]}]}}
 
       assert Parser.parse("(~A<->(A^B))->~C") ==
-               {:ok, {:if, [iff: [not: "A", and: ["A", "B"]], not: "C"]}}
+               {:ok, {:if, [iff: [not: ["A"], and: ["A", "B"]], not: ["C"]]}}
     end
 
     test "returns an error tuple for unparseable input" do
@@ -45,10 +45,10 @@ defmodule Quine.ParserTest do
   describe "print!/1" do
     test "prints parsed expressions" do
       assert Parser.print!("A") == "A"
-      assert Parser.print!({:not, "A"}) == "~A"
-      assert Parser.print!({:not, {:or, ["A", "B"]}}) == "~(AvB)"
+      assert Parser.print!({:not, ["A"]}) == "~A"
+      assert Parser.print!({:not, [{:or, ["A", "B"]}]}) == "~(AvB)"
       assert Parser.print!({:if, ["A", "B"]}) == "A->B"
-      assert Parser.print!({:if, [{:and, ["A", "B"]}, {:not, "C"}]}) == "(A^B)->~C"
+      assert Parser.print!({:if, [{:and, ["A", "B"]}, {:not, ["C"]}]}) == "(A^B)->~C"
     end
   end
 end

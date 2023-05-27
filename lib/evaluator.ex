@@ -11,7 +11,7 @@ defmodule Quine.Evaluator do
     end
   end
 
-  def evaluate({:not, expression}, truth_values) do
+  def evaluate({:not, [expression]}, truth_values) do
     not evaluate(expression, truth_values)
   end
 

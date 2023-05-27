@@ -48,7 +48,7 @@ defmodule Quine.Parser do
     :negation,
     ignore(string("~"))
     |> concat(statement)
-    |> unwrap_and_tag(:not)
+    |> tag(:not)
   )
 
   defcombinatorp(
@@ -74,7 +74,7 @@ defmodule Quine.Parser do
 
   @doc "Converts a parsed expression back into a string"
   def print!(sentence) when is_binary(sentence), do: sentence
-  def print!({:not, expression}), do: "~" <> maybe_group(expression)
+  def print!({:not, [expression]}), do: "~" <> maybe_group(expression)
   def print!({:or, [left, right]}), do: maybe_group(left) <> "v" <> maybe_group(right)
   def print!({:and, [left, right]}), do: maybe_group(left) <> "^" <> maybe_group(right)
   def print!({:if, [left, right]}), do: maybe_group(left) <> "->" <> maybe_group(right)
