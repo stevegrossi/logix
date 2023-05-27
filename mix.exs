@@ -8,8 +8,10 @@ defmodule Quine.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      aliases: aliases(),
       preferred_cli_env: [
-        "test.watch": :test
+        "test.watch": :test,
+        lint: :test
       ]
     ]
   end
@@ -25,7 +27,14 @@ defmodule Quine.MixProject do
   defp deps do
     [
       {:nimble_parsec, "~> 1.0"},
+      {:dialyxir, "~> 1.3", runtime: false},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test]}
+    ]
+  end
+
+  defp aliases do
+    [
+      lint: ["test", "dialyzer"]
     ]
   end
 end
