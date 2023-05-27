@@ -206,7 +206,7 @@ defmodule QuineTest do
                 }}
     end
 
-    test "proves by implication elimination" do
+    test "proves sentences by implication elimination" do
       assert Quine.prove(["A", "A->B"], "B") ==
                {:ok,
                 %{
@@ -221,6 +221,16 @@ defmodule QuineTest do
                   1 => {"~(A^B)", :premise},
                   2 => {"(~(A^B))->C", :premise},
                   3 => {"C", {:implication_elimination, [1, 2]}}
+                }}
+    end
+
+    test "proves other expressions by implication elimination" do
+      assert Quine.prove(["A", "A->(BvC)"], "BvC") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"A->(BvC)", :premise},
+                  3 => {"BvC", {:implication_elimination, [1, 2]}}
                 }}
     end
 

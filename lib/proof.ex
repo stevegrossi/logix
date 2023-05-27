@@ -10,9 +10,9 @@ defmodule Quine.Proof do
 
   alias Quine.Parser
 
-  @type t :: %__MODULE__{}
-
   @failure {:error, :proof_failed}
+  @type t :: %__MODULE__{}
+  @type failure :: {:error, :proof_failed}
 
   @spec new(list(), term()) :: t()
   def new(premises, conclusion) do
@@ -24,28 +24,30 @@ defmodule Quine.Proof do
     })
   end
 
-  @spec prove(t()) :: {:ok, t()} | {:error, :proof_failed}
+  @spec prove(t()) :: {:ok, t()} | failure()
   def prove(proof), do: prove(proof, proof.conclusion)
 
-  @spec prove(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
+  @spec prove(t(), term()) :: {:ok, t()} | failure()
   defp prove(proof, conclusion) do
     if evidence_for(proof, conclusion) do
       {:ok, proof}
     else
-      case conclusion do
-        sentence when is_binary(sentence) -> prove_by_elimination(proof, sentence)
-        {:and, _} -> prove_conjunction(proof, conclusion)
-        {:or, _} -> prove_disjunction(proof, conclusion)
-        {:iff, _} -> prove_biconditional(proof, conclusion)
-        _ -> @failure
-      end
+      # TODO: make this a pipeline
+      try_conjunction_introduction(proof, conclusion) ||
+        try_disjunction_introduction(proof, conclusion) ||
+        try_biconditional_introduction(proof, conclusion) ||
+        try_conjunction_elimination(proof, conclusion) ||
+        try_disjunction_elimination(proof, conclusion) ||
+        try_implication_elimination(proof, conclusion) ||
+        try_biconditional_elimination(proof, conclusion) ||
+        @failure
     end
   end
 
   @spec format(t()) :: map()
   def format(proof) do
-    Map.new(proof.steps, fn {step, {statement, reason}} ->
-      {step, {Parser.print!(statement), reason}}
+    Map.new(proof.steps, fn {step, {statement, justification}} ->
+      {step, {Parser.print!(statement), justification}}
     end)
   end
 
@@ -59,73 +61,67 @@ defmodule Quine.Proof do
     Map.merge(proof, %{steps: steps, next_step: map_size(steps) + 1})
   end
 
-  @spec prove_conjunction(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
-  defp prove_conjunction(proof, {:and, [left, right]} = conclusion) do
+  @spec try_conjunction_introduction(t(), any()) :: {:ok, t()} | nil
+  defp try_conjunction_introduction(proof, {:and, [left, right]} = conclusion) do
     with {:ok, proof} <- prove(proof, left),
          {:ok, proof} <- prove(proof, right) do
       {line_proving_left, _} = evidence_for(proof, left)
       {line_proving_right, _} = evidence_for(proof, right)
 
       {:ok,
-       add_line(
-         proof,
-         {conclusion,
-          {:conjunction_introduction, Enum.sort([line_proving_left, line_proving_right])}}
-       )}
+       conclude(proof, conclusion, :conjunction_introduction, [
+         line_proving_left,
+         line_proving_right
+       ])}
     end
   end
 
-  @spec prove_disjunction(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
-  defp prove_disjunction(proof, {:or, [left, right]} = conclusion) do
+  defp try_conjunction_introduction(_, _), do: nil
+
+  @spec try_disjunction_introduction(t(), any()) :: {:ok, t()} | nil
+  defp try_disjunction_introduction(proof, {:or, [left, right]} = conclusion) do
     case prove(proof, left) do
       {:ok, proof} ->
         {line_proving_left, _} = evidence_for(proof, left)
-        {:ok, add_line(proof, {conclusion, {:disjunction_introduction, [line_proving_left]}})}
+        {:ok, conclude(proof, conclusion, :disjunction_introduction, [line_proving_left])}
 
       @failure ->
         case prove(proof, right) do
           {:ok, proof} ->
             {line_proving_right, _} = evidence_for(proof, right)
 
-            {:ok,
-             add_line(proof, {conclusion, {:disjunction_introduction, [line_proving_right]}})}
+            {:ok, conclude(proof, conclusion, :disjunction_introduction, [line_proving_right])}
 
           @failure ->
-            @failure
+            nil
         end
     end
   end
 
-  @spec prove_biconditional(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
-  defp prove_biconditional(proof, {:iff, [left, right]} = conclusion) do
+  defp try_disjunction_introduction(_, _), do: nil
+
+  @spec try_biconditional_introduction(t(), any()) :: {:ok, t()} | nil
+  defp try_biconditional_introduction(proof, {:iff, [left, right]} = conclusion) do
     with {:ok, proof} <- prove(proof, {:if, [left, right]}),
          {:ok, proof} <- prove(proof, {:if, [right, left]}) do
       {left_implying_right, _} = evidence_for(proof, {:if, [left, right]})
       {right_implying_left, _} = evidence_for(proof, {:if, [right, left]})
 
       {:ok,
-       add_line(
-         proof,
-         {conclusion,
-          {:biconditional_introduction, Enum.sort([left_implying_right, right_implying_left])}}
-       )}
+       conclude(proof, conclusion, :biconditional_introduction, [
+         left_implying_right,
+         right_implying_left
+       ])}
     end
   end
 
-  @spec prove_by_elimination(t(), term()) :: {:ok, t()} | {:error, :proof_failed}
-  defp prove_by_elimination(proof, conclusion) when is_binary(conclusion) do
-    # TODO: Negation Elimination
-    try_conjunction_elimination(proof, conclusion) ||
-      try_disjunction_elimination(proof, conclusion) ||
-      try_implication_elimination(proof, conclusion) ||
-      try_biconditional_elimination(proof, conclusion) ||
-      @failure
-  end
+  defp try_biconditional_introduction(_, _), do: nil
 
+  @spec try_conjunction_elimination(t(), any()) :: {:ok, t()} | nil
   defp try_conjunction_elimination(proof, conclusion) do
     case find_conjunction_including(proof, conclusion) do
       {line, _conjunction} ->
-        {:ok, add_line(proof, {conclusion, {:conjunction_elimination, [line]}})}
+        {:ok, conclude(proof, conclusion, :conjunction_elimination, [line])}
 
       nil ->
         nil
@@ -133,7 +129,7 @@ defmodule Quine.Proof do
   end
 
   defp find_conjunction_including(proof, conclusion) do
-    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+    Enum.find(proof.steps, fn {_line, {statement, _justification}} ->
       case statement do
         {:and, [^conclusion, _right]} -> true
         {:and, [_left, ^conclusion]} -> true
@@ -142,11 +138,13 @@ defmodule Quine.Proof do
     end)
   end
 
+  @spec try_disjunction_elimination(t(), any()) :: {:ok, t()} | nil
   defp try_disjunction_elimination(proof, conclusion) do
     case find_implications_concluding(proof, conclusion) do
       implication_lines when is_list(implication_lines) and length(implication_lines) > 1 ->
         antecedents =
-          Enum.map(implication_lines, fn {_line_num, {{:if, [antecedent, _conclusion]}, _reason}} ->
+          Enum.map(implication_lines, fn {_line_num,
+                                          {{:if, [antecedent, _conclusion]}, _justification}} ->
             antecedent
           end)
 
@@ -154,19 +152,19 @@ defmodule Quine.Proof do
           nil ->
             nil
 
-          {disjunction_line, {{:or, disjuncts}, _reason}} ->
+          {disjunction_line, {{:or, disjuncts}, _justification}} ->
             # need to filter implication_lines by the ones in the disjunction
             relevant_implication_lines =
               implication_lines
               |> Enum.filter(fn implication_line ->
-                {_line, {{:if, [antecedent, _consequent]}, _reason}} = implication_line
+                {_line, {{:if, [antecedent, _consequent]}, _justification}} = implication_line
                 antecedent in disjuncts
               end)
               |> Enum.map(&elem(&1, 0))
 
-            reasons = Enum.sort(relevant_implication_lines ++ [disjunction_line])
+            justifications = Enum.sort(relevant_implication_lines ++ [disjunction_line])
 
-            {:ok, add_line(proof, {conclusion, {:disjunction_elimination, reasons}})}
+            {:ok, conclude(proof, conclusion, :disjunction_elimination, justifications)}
         end
 
       _ ->
@@ -175,7 +173,7 @@ defmodule Quine.Proof do
   end
 
   defp find_disjunction_including(proof, statements) do
-    Enum.find(proof.steps, fn {_line_num, {statement, _reason}} ->
+    Enum.find(proof.steps, fn {_line_num, {statement, _justification}} ->
       case statement do
         {:or, [left, right]} ->
           left in statements and right in statements
@@ -186,9 +184,10 @@ defmodule Quine.Proof do
     end)
   end
 
+  @spec try_implication_elimination(t(), any()) :: {:ok, t()} | nil
   defp try_implication_elimination(proof, conclusion) do
     case find_implication_concluding(proof, conclusion) do
-      {line_implying_conclusion, {implication, _reason}} ->
+      {line_implying_conclusion, {implication, _justification}} ->
         {:if, [antecedent, ^conclusion]} = implication
 
         case prove(proof, antecedent) do
@@ -196,14 +195,13 @@ defmodule Quine.Proof do
             {line, _} = evidence_for(proof, antecedent)
 
             {:ok,
-             add_line(
-               proof,
-               {conclusion,
-                {:implication_elimination, Enum.sort([line, line_implying_conclusion])}}
-             )}
+             conclude(proof, conclusion, :implication_elimination, [
+               line,
+               line_implying_conclusion
+             ])}
 
           @failure ->
-            @failure
+            nil
         end
 
       nil ->
@@ -211,9 +209,10 @@ defmodule Quine.Proof do
     end
   end
 
+  @spec try_biconditional_elimination(t(), any()) :: {:ok, t()} | nil
   defp try_biconditional_elimination(proof, conclusion) do
     case find_biconditional_including(proof, conclusion) do
-      {line_implying_conclusion, {biconditional_implying_conclusion, _reason}} ->
+      {line_implying_conclusion, {biconditional_implying_conclusion, _justification}} ->
         needed =
           case biconditional_implying_conclusion do
             {:iff, [left, ^conclusion]} -> left
@@ -225,14 +224,13 @@ defmodule Quine.Proof do
             {line, _} = evidence_for(proof, needed)
 
             {:ok,
-             add_line(
-               proof,
-               {conclusion,
-                {:biconditional_elimination, Enum.sort([line, line_implying_conclusion])}}
-             )}
+             conclude(proof, conclusion, :biconditional_elimination, [
+               line,
+               line_implying_conclusion
+             ])}
 
           @failure ->
-            @failure
+            nil
         end
 
       nil ->
@@ -241,7 +239,7 @@ defmodule Quine.Proof do
   end
 
   defp find_biconditional_including(proof, conclusion) do
-    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+    Enum.find(proof.steps, fn {_line, {statement, _justification}} ->
       case statement do
         {:iff, [_left, ^conclusion]} -> true
         {:iff, [^conclusion, _right]} -> true
@@ -251,7 +249,7 @@ defmodule Quine.Proof do
   end
 
   defp evidence_for(proof, conclusion) do
-    Enum.find(proof.steps, fn {_line, {result, _reason}} ->
+    Enum.find(proof.steps, fn {_line, {result, _justification}} ->
       result == conclusion
     end)
   end
@@ -264,7 +262,7 @@ defmodule Quine.Proof do
   end
 
   defp find_implications_concluding(proof, conclusion) do
-    Enum.filter(proof.steps, fn {_line, {statement, _reason}} ->
+    Enum.filter(proof.steps, fn {_line, {statement, _justification}} ->
       case statement do
         {:if, [_antecedent, ^conclusion]} -> true
         _ -> false
@@ -272,13 +270,11 @@ defmodule Quine.Proof do
     end)
   end
 
-  defp add_line(proof, step) do
-    next_step = proof.next_step
-
+  defp conclude(proof, conclusion, rule, justifications) do
     proof
-    |> Map.put(:next_step, next_step + 1)
+    |> Map.put(:next_step, proof.next_step + 1)
     |> Map.update!(:steps, fn steps ->
-      Map.put(steps, next_step, step)
+      Map.put(steps, proof.next_step, {conclusion, {rule, Enum.sort(justifications)}})
     end)
   end
 end
