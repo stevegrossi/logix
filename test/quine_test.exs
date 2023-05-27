@@ -224,13 +224,21 @@ defmodule QuineTest do
                 }}
     end
 
-    test "proves other expressions by implication elimination" do
+    test "proves other statements by implication elimination" do
       assert Quine.prove(["A", "A->(BvC)"], "BvC") ==
                {:ok,
                 %{
                   1 => {"A", :premise},
                   2 => {"A->(BvC)", :premise},
                   3 => {"BvC", {:implication_elimination, [1, 2]}}
+                }}
+
+      assert Quine.prove(["(BvC)", "(BvC)->A"], "A") ==
+               {:ok,
+                %{
+                  1 => {"BvC", :premise},
+                  2 => {"(BvC)->A", :premise},
+                  3 => {"A", {:implication_elimination, [1, 2]}}
                 }}
     end
 
@@ -261,6 +269,16 @@ defmodule QuineTest do
                   1 => {"B", :premise},
                   2 => {"A<->B", :premise},
                   3 => {"A", {:biconditional_elimination, [1, 2]}}
+                }}
+    end
+
+    test "proves other statements by biconditional elimination" do
+      assert Quine.prove(["~(B^C)", "(A<->D)<->~(B^C)"], "A<->D") ==
+               {:ok,
+                %{
+                  1 => {"~(B^C)", :premise},
+                  2 => {"(A<->D)<->(~(B^C))", :premise},
+                  3 => {"A<->D", {:biconditional_elimination, [1, 2]}}
                 }}
     end
 
@@ -313,7 +331,7 @@ defmodule QuineTest do
                 }}
     end
 
-    test "proves by disjunction elimination" do
+    test "proves sentences by disjunction elimination" do
       assert Quine.prove(["AvB", "A->C", "B->C", "D->C"], "C") ==
                {:ok,
                 %{
@@ -322,6 +340,18 @@ defmodule QuineTest do
                   3 => {"B->C", :premise},
                   4 => {"D->C", :premise},
                   5 => {"C", {:disjunction_elimination, [1, 2, 3]}}
+                }}
+    end
+
+    test "proves other statements by disjunction elimination" do
+      assert Quine.prove(["AvB", "A->(~(C<->E))", "B->(~(C<->E))", "D->(~(C<->E))"], "~(C<->E)") ==
+               {:ok,
+                %{
+                  1 => {"AvB", :premise},
+                  2 => {"A->(~(C<->E))", :premise},
+                  3 => {"B->(~(C<->E))", :premise},
+                  4 => {"D->(~(C<->E))", :premise},
+                  5 => {"~(C<->E)", {:disjunction_elimination, [1, 2, 3]}}
                 }}
     end
   end
