@@ -105,7 +105,7 @@ Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're en
 - **biconditional**: Biconditional Introduction, any
 
 ### TODO
-- [ ] Enhance the proof-by-elimination strategies to prove their own requirements
+- [ ] Enhance the remaining proof-by-elimination strategies to prove their own requirements
 - [ ] Implement the proof-by-assumption strategies: implication introduction, negation introduction, and negation elimination
 - [ ] Could things be simpler if sentences were tagged? e.g. `{:sentence, "A"}` instead of bare strings
 
