@@ -254,6 +254,18 @@ defmodule QuineTest do
                 }}
     end
 
+    test "proves by nested implication elimination" do
+      assert Quine.prove(["A", "B", "A->(B->C)"], "C") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"B", :premise},
+                  3 => {"A->(B->C)", :premise},
+                  4 => {"B->C", {:implication_elimination, [1, 3]}},
+                  5 => {"C", {:implication_elimination, [2, 4]}}
+                }}
+    end
+
     test "proves sentences by biconditional elimination" do
       assert Quine.prove(["A", "A<->B"], "B") ==
                {:ok,

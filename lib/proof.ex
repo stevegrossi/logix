@@ -218,17 +218,42 @@ defmodule Quine.Proof do
 
   @spec try_implication_elimination(t(), statement()) :: {:ok, t()} | nil
   defp try_implication_elimination(proof, conclusion) do
-    with {line_implying_conclusion, {{:if, [antecedent, ^conclusion]}, _just}} <-
-           find_implication_concluding(proof, conclusion),
+    with {_line, {statement_containing_implication, _just}} <-
+           find_line_including_implication_of(proof, conclusion),
+         {:if, _} = implication_implying_conclusion <-
+           find_implication_of_anywhere(statement_containing_implication, conclusion),
+         antecedent <- other_operand(implication_implying_conclusion, conclusion),
          {:ok, proof} <- prove(proof, antecedent),
-         {line, _} <- justification_for(proof, antecedent) do
+         {:ok, proof} <- prove(proof, implication_implying_conclusion),
+         {line_implying_conclusion, _} <-
+           justification_for(proof, implication_implying_conclusion),
+         {line_justifying_antecedent, _} <- justification_for(proof, antecedent) do
       conclude(proof, conclusion, :implication_elimination, [
-        line,
-        line_implying_conclusion
+        line_implying_conclusion,
+        line_justifying_antecedent
       ])
     else
       _ -> nil
     end
+  end
+
+  @spec find_line_including_implication_of(t(), statement()) :: step() | nil
+  defp find_line_including_implication_of(proof, conclusion) do
+    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+      find_implication_of_anywhere(statement, conclusion)
+    end)
+  end
+
+  defp find_implication_of_anywhere(statement, _conclusion) when is_binary(statement) do
+    nil
+  end
+
+  defp find_implication_of_anywhere({:if, [_antecedent, conclusion]} = statement, conclusion) do
+    statement
+  end
+
+  defp find_implication_of_anywhere({_operator, operands}, conclusion) do
+    Enum.find(operands, &find_implication_of_anywhere(&1, conclusion))
   end
 
   @spec try_biconditional_elimination(t(), statement()) :: {:ok, t()} | nil
@@ -281,13 +306,6 @@ defmodule Quine.Proof do
     Enum.find(proof.steps, fn {_line, {result, _just}} ->
       result == conclusion
     end)
-  end
-
-  defp find_implication_concluding(proof, conclusion) do
-    case find_implications_concluding(proof, conclusion) do
-      [] -> nil
-      [first | _] -> first
-    end
   end
 
   defp find_implications_concluding(proof, conclusion) do
