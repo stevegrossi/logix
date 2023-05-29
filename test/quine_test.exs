@@ -294,6 +294,21 @@ defmodule QuineTest do
                 }}
     end
 
+    test "proves biconditionals inside other expressions" do
+      assert Quine.prove(["A", "A->(B<->C)", "B"], "C") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"A->(B<->C)", :premise},
+                  3 => {"B", :premise},
+                  4 => {"B<->C", {:implication_elimination, [1, 2]}},
+                  5 => {"C", {:biconditional_elimination, [3, 4]}}
+                }}
+    end
+
+    # test nested biconditional?
+    # find_biconditional_including/1 only looks 1 level deep
+
     test "proves by biconditional introduction" do
       assert Quine.prove(["A->B", "B->A"], "A<->B") ==
                {:ok,
