@@ -216,31 +216,23 @@ defmodule Quine.Proof do
 
   @spec try_biconditional_elimination(t(), any()) :: {:ok, t()} | nil
   defp try_biconditional_elimination(proof, conclusion) do
-    case find_biconditional_including(proof, conclusion) do
-      {line_implying_conclusion, {biconditional_implying_conclusion, _just}} ->
-        needed =
-          case biconditional_implying_conclusion do
-            {:iff, [left, ^conclusion]} -> left
-            {:iff, [^conclusion, right]} -> right
-          end
-
-        case prove(proof, needed) do
-          {:ok, proof} ->
-            {line, _} = justification_for(proof, needed)
-
-            conclude(proof, conclusion, :biconditional_elimination, [
-              line,
-              line_implying_conclusion
-            ])
-
-          @failure ->
-            nil
-        end
-
-      nil ->
-        nil
+    with {line_implying_conclusion, {biconditional_implying_conclusion, _just}} <-
+           find_biconditional_including(proof, conclusion),
+         needed <- other_operand(biconditional_implying_conclusion, conclusion),
+         {:ok, proof} <- prove(proof, needed),
+         {line_justifying_other_side, _} <- justification_for(proof, needed) do
+      conclude(proof, conclusion, :biconditional_elimination, [
+        line_justifying_other_side,
+        line_implying_conclusion
+      ])
+    else
+      _ -> nil
     end
   end
+
+  defp other_operand({_operator, [other, given]}, given), do: other
+  defp other_operand({_operator, [given, other]}, given), do: other
+  defp other_operand(_, _), do: raise("Statement does not contain 2 operands")
 
   defp find_biconditional_including(proof, conclusion) do
     Enum.find(proof.steps, fn {_line, {statement, _just}} ->
