@@ -7,47 +7,55 @@ defmodule Quine do
   alias Quine.Parser
   alias Quine.Proof
 
+  @type sentence :: String.t()
+  @type model :: %{sentence() => boolean()}
+
   @doc "Determines the truth value of an expression given a model of its sentences"
-  def evaluate(expression, truth_values) do
-    expression
+  @spec evaluate(String.t(), model()) :: boolean()
+  def evaluate(input, model) do
+    input
     |> parse()
-    |> Evaluator.evaluate(truth_values)
+    |> Evaluator.evaluate(model)
   end
 
-  def tautology?(expression) do
-    variables = variables(expression)
-    parsed_expression = parse(expression)
-    truth_values = generate_truth_values(variables)
+  @spec tautology?(String.t()) :: boolean()
+  def tautology?(input) do
+    variables = variables(input)
+    parsed_statement = parse(input)
+    models = generate_models(variables)
 
-    length(truth_values) > 0 and
-      Enum.all?(truth_values, &Evaluator.evaluate(parsed_expression, &1))
+    length(models) > 0 and Enum.all?(models, &Evaluator.evaluate(parsed_statement, &1))
   end
 
-  def contradiction?(expression) do
-    variables = variables(expression)
-    parsed_expression = parse(expression)
-    truth_values = generate_truth_values(variables)
+  @spec contradiction?(String.t()) :: boolean()
+  def contradiction?(input) do
+    variables = variables(input)
+    parsed_statement = parse(input)
+    models = generate_models(variables)
 
-    length(truth_values) > 0 and
-      Enum.all?(truth_values, &(not Evaluator.evaluate(parsed_expression, &1)))
+    length(models) > 0 and Enum.all?(models, &(not Evaluator.evaluate(parsed_statement, &1)))
   end
 
-  def satisfiable?(expression) do
-    not contradiction?(expression)
+  @spec satisfiable?(String.t()) :: boolean()
+  def satisfiable?(input) do
+    not contradiction?(input)
   end
 
-  def contingent?(expression) do
-    satisfiable?(expression) and not tautology?(expression)
+  @spec contingent?(String.t()) :: boolean()
+  def contingent?(input) do
+    satisfiable?(input) and not tautology?(input)
   end
 
-  defp variables(expression) when is_binary(expression) do
+  @spec variables(String.t()) :: [sentence()]
+  defp variables(input) when is_binary(input) do
     ~r|[A-Z]|
-    |> Regex.scan(expression)
+    |> Regex.scan(input)
     |> List.flatten()
     |> Enum.uniq()
   end
 
-  def generate_truth_values(variables) do
+  @spec generate_models([sentence()]) :: [model()]
+  defp generate_models(variables) do
     possible_values = for i <- variables, val <- [true, false], do: %{i => val}
 
     possible_values =
@@ -56,6 +64,7 @@ defmodule Quine do
     Enum.filter(possible_values, &(map_size(&1) == length(variables)))
   end
 
+  @spec equivalent?(String.t(), String.t()) :: boolean()
   def equivalent?(expression1, expression2) do
     tautology?("(#{expression1})<->(#{expression2})")
   end
@@ -81,6 +90,7 @@ defmodule Quine do
       {:error, :proof_failed}
 
   """
+  @spec prove([String.t()], String.t()) :: Parser.error() | Proof.result()
   def prove(premises, conclusion) do
     result =
       premises
@@ -94,6 +104,7 @@ defmodule Quine do
     end
   end
 
+  @spec parse(String.t()) :: Proof.statement()
   defp parse(string) do
     {:ok, parsed} = Parser.parse(string)
     parsed

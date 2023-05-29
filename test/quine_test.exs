@@ -254,7 +254,7 @@ defmodule QuineTest do
                 }}
     end
 
-    test "proves by biconditional elimination" do
+    test "proves sentences by biconditional elimination" do
       assert Quine.prove(["A", "A<->B"], "B") ==
                {:ok,
                 %{

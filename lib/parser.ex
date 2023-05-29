@@ -4,6 +4,9 @@ defmodule Quine.Parser do
   """
 
   import NimbleParsec
+  alias Quine.Proof
+
+  @type error :: {:error, :parse_error}
 
   sentence = ascii_string([?A..?Z], 1)
 
@@ -65,6 +68,7 @@ defmodule Quine.Parser do
 
   defparsec(:parse_expression, parsec(:expression))
 
+  @spec parse(String.t()) :: {:ok, Proof.statement()} | error()
   def parse(string) do
     case parse_expression(string) do
       {:ok, [parsed], "", _, _, _} -> {:ok, parsed}
@@ -73,6 +77,7 @@ defmodule Quine.Parser do
   end
 
   @doc "Converts a parsed expression back into a string"
+  @spec print!(Proof.statement()) :: String.t()
   def print!(sentence) when is_binary(sentence), do: sentence
   def print!({:not, [expression]}), do: "~" <> maybe_group(expression)
   def print!({:or, [left, right]}), do: maybe_group(left) <> "v" <> maybe_group(right)
@@ -82,6 +87,7 @@ defmodule Quine.Parser do
 
   # Bit of a hack relying on the fact that the expressions we need to group within parens all have
   # more characters than the ones we don't (1-character sentences and 2-character negations)
+  @spec maybe_group(Proof.statement()) :: String.t()
   defp maybe_group(expression) do
     case print!(expression) do
       <<sentence::bytes-size(1)>> -> sentence
