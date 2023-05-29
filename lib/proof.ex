@@ -160,7 +160,7 @@ defmodule Quine.Proof do
   end
 
   defp find_conjunction_anywhere({_operator, conjuncts}, conclusion) do
-    Enum.find(conjuncts, &find_conjunction_anywhere(&1, conclusion))
+    Enum.find_value(conjuncts, &find_conjunction_anywhere(&1, conclusion))
   end
 
   @spec find_line_including_conjunct(t(), statement()) :: step() | nil
@@ -244,16 +244,16 @@ defmodule Quine.Proof do
     end)
   end
 
-  defp find_implication_of_anywhere(statement, _conclusion) when is_binary(statement) do
+  def find_implication_of_anywhere(statement, _conclusion) when is_binary(statement) do
     nil
   end
 
-  defp find_implication_of_anywhere({:if, [_antecedent, conclusion]} = statement, conclusion) do
+  def find_implication_of_anywhere({:if, [_antecedent, conclusion]} = statement, conclusion) do
     statement
   end
 
-  defp find_implication_of_anywhere({_operator, operands}, conclusion) do
-    Enum.find(operands, &find_implication_of_anywhere(&1, conclusion))
+  def find_implication_of_anywhere({_operator, operands}, conclusion) do
+    Enum.find_value(operands, &find_implication_of_anywhere(&1, conclusion))
   end
 
   @spec try_biconditional_elimination(t(), statement()) :: {:ok, t()} | nil
@@ -280,7 +280,7 @@ defmodule Quine.Proof do
   @spec other_operand(statement(), statement()) :: statement()
   defp other_operand({_operator, [other, given]}, given), do: other
   defp other_operand({_operator, [given, other]}, given), do: other
-  defp other_operand(_, _), do: raise("Statement does not contain 2 operands")
+  defp other_operand(_, _), do: nil
 
   @spec find_line_including_biconditional_including(t(), statement()) :: step() | nil
   defp find_line_including_biconditional_including(proof, conclusion) do
@@ -298,7 +298,7 @@ defmodule Quine.Proof do
   end
 
   defp find_biconclusion_anywhere({_operator, operands}, conclusion) do
-    Enum.find(operands, &find_biconclusion_anywhere(&1, conclusion))
+    Enum.find_value(operands, &find_biconclusion_anywhere(&1, conclusion))
   end
 
   @spec justification_for(t(), statement()) :: step() | nil

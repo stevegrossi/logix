@@ -255,14 +255,16 @@ defmodule QuineTest do
     end
 
     test "proves by nested implication elimination" do
-      assert Quine.prove(["A", "B", "A->(B->C)"], "C") ==
+      assert Quine.prove(["A", "B", "C", "A->(B->(C->D))"], "D") ==
                {:ok,
                 %{
                   1 => {"A", :premise},
                   2 => {"B", :premise},
-                  3 => {"A->(B->C)", :premise},
-                  4 => {"B->C", {:implication_elimination, [1, 3]}},
-                  5 => {"C", {:implication_elimination, [2, 4]}}
+                  3 => {"C", :premise},
+                  4 => {"A->(B->(C->D))", :premise},
+                  5 => {"B->(C->D)", {:implication_elimination, [1, 4]}},
+                  6 => {"C->D", {:implication_elimination, [2, 5]}},
+                  7 => {"D", {:implication_elimination, [3, 6]}}
                 }}
     end
 
