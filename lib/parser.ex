@@ -1,10 +1,10 @@
-defmodule Quine.Parser do
+defmodule Logix.Parser do
   @moduledoc """
   A parser for simple propositional logic statements
   """
 
   import NimbleParsec
-  alias Quine.Proof
+  alias Logix.Proof
 
   @type error :: {:error, :parse_error}
 

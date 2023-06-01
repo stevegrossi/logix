@@ -1,4 +1,4 @@
-defmodule Quine.Evaluator do
+defmodule Logix.Evaluator do
   @moduledoc """
   Calculates the truth value of expressions given maps of truth values of its sentences
   """

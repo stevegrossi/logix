@@ -1,9 +1,9 @@
-defmodule Quine.MixProject do
+defmodule Logix.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :quine,
+      app: :logix,
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,

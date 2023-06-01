@@ -1,4 +1,4 @@
-# Quine
+# Logix
 
 Tools for parsing and working with propositional logic.
 
@@ -7,36 +7,36 @@ Tools for parsing and working with propositional logic.
 ### Evaluating propositions with given truth values
 
 ```elixir
-Quine.evaluate("A^B", %{"A" => true, "B" => true})
+Logix.evaluate("A^B", %{"A" => true, "B" => true})
 #=> true
 
-Quine.evaluate("A^B", %{"A" => true, "B" => false})
+Logix.evaluate("A^B", %{"A" => true, "B" => false})
 #=> false
 ```
 
 ### Detecting tautologies and contraditions
 
 ```elixir
-Quine.tautology?("(A->B)<->(Bv~A)")
+Logix.tautology?("(A->B)<->(Bv~A)")
 #=> true
 
-Quine.tautology?("A->B")
+Logix.tautology?("A->B")
 #=> false
 
-Quine.contradtion?("A^~A")
+Logix.contradtion?("A^~A")
 #=> true
 
-Quine.contradtion?("A->B")
+Logix.contradtion?("A->B")
 #=> false
 ```
 
 ### Detecting Logical Equivalence
 
 ```elixir
-Quine.equivalent?("A->B", "~B->~A")
+Logix.equivalent?("A->B", "~B->~A")
 #=> true
 
-Quine.equivalent?("A->B", "AvB")
+Logix.equivalent?("A->B", "AvB")
 #=> false
 ```
 
@@ -113,4 +113,4 @@ Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're en
 
 - [Mathematical Logic Through Python](https://www.logicthrupython.org/)
 - https://people.cs.pitt.edu/~milos/courses/cs441/lectures/Class2.pdf
-- [An online theorem prover](http://teachinglogic.liglab.fr/DN/index.php?formula=p+%26+%28q+%2B+r%29+%3C%3D%3E+%28p+%26+q%29+%2B+%28p+%26+r%29&action=Prove+Formula), the closest (and only) example I've been able to find of software that does what Quine sets out to do
+- [An online theorem prover](http://teachinglogic.liglab.fr/DN/index.php?formula=p+%26+%28q+%2B+r%29+%3C%3D%3E+%28p+%26+q%29+%2B+%28p+%26+r%29&action=Prove+Formula), the closest (and only) example I've been able to find of software that does what Logix sets out to do

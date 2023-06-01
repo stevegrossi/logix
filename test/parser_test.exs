@@ -1,6 +1,6 @@
-defmodule Quine.ParserTest do
+defmodule Logix.ParserTest do
   use ExUnit.Case
-  alias Quine.Parser
+  alias Logix.Parser
 
   describe "parse/1" do
     test "parses sentences" do

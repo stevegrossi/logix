@@ -1,11 +1,11 @@
-defmodule Quine do
+defmodule Logix do
   @moduledoc """
-  Documentation for `Quine`.
+  Documentation for `Logix`.
   """
 
-  alias Quine.Evaluator
-  alias Quine.Parser
-  alias Quine.Proof
+  alias Logix.Evaluator
+  alias Logix.Parser
+  alias Logix.Proof
 
   @type sentence :: String.t()
   @type model :: %{sentence() => boolean()}
@@ -75,7 +75,7 @@ defmodule Quine do
 
   ## Examples
 
-      iex> Quine.prove(["A", "BvC", "B->D", "C->D"], "A^D")
+      iex> Logix.prove(["A", "BvC", "B->D", "C->D"], "A^D")
       {:ok,
         %{
           1 => {"A", :premise},
@@ -86,7 +86,7 @@ defmodule Quine do
           6 => {"A^D", {:conjunction_introduction, [1, 5]}}
         }}
 
-      iex> Quine.prove(["A"], "B")
+      iex> Logix.prove(["A"], "B")
       {:error, :proof_failed}
 
   """

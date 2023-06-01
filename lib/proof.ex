@@ -1,4 +1,4 @@
-defmodule Quine.Proof do
+defmodule Logix.Proof do
   @moduledoc """
   This module is responsible for generating logical proofs as represented by its struct.
   Proof structs operate on parsed expressions which they expect to be intialized with. To convert
@@ -8,7 +8,7 @@ defmodule Quine.Proof do
   @enforce_keys ~w[premises conclusion steps next_step]a
   defstruct @enforce_keys
 
-  alias Quine.Parser
+  alias Logix.Parser
 
   @failure {:error, :proof_failed}
   @type t :: %__MODULE__{
