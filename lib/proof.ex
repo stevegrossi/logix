@@ -163,17 +163,13 @@ defmodule Logix.Proof do
   defp try_disjunction_elimination(proof, conclusion) do
     with [_ | [_ | _]] = implication_lines <- find_implications_concluding(proof, conclusion),
          antecedents <- list_antecedents(implication_lines),
-         {disjunction_line, {{:or, disjuncts}, _just}} <-
-           find_disjunction_including(proof, antecedents) do
-      # we first filter implication_lines by the ones in the disjunction
-      relevant_implication_lines =
-        implication_lines
-        |> Enum.filter(fn implication_line ->
-          {_line, {{:if, [antecedent, _consequent]}, _just}} = implication_line
-          antecedent in disjuncts
-        end)
-        |> Enum.map(&elem(&1, 0))
-
+         {_line_with_disjunction, {statement_with_disjunction, _just}} <-
+           find_disjunction_including(proof, antecedents),
+         {:or, disjuncts} = disjunction <-
+           find_anywhere(statement_with_disjunction, &disjunction_of(&1, antecedents)),
+         {:ok, proof} <- prove(proof, disjunction),
+         relevant_implication_lines <- filter_by_antecedents(implication_lines, disjuncts),
+         {disjunction_line, _} <- justification_for(proof, disjunction) do
       conclude(
         proof,
         conclusion,
@@ -185,6 +181,18 @@ defmodule Logix.Proof do
     end
   end
 
+  defp filter_by_antecedents(lines, antecedents) do
+    lines
+    |> Enum.filter(fn implication_line ->
+      {_line, {{:if, [antecedent, _consequent]}, _just}} = implication_line
+      antecedent in antecedents
+    end)
+    |> Enum.map(&step_number(&1))
+  end
+
+  @spec step_number(step()) :: step_number()
+  defp step_number({line_num, _} = _line), do: line_num
+
   @spec list_antecedents([{:iff, list()}]) :: list()
   defp list_antecedents(implication_lines) do
     Enum.map(implication_lines, fn {_line_num, {{:if, [antecedent, _conclusion]}, _just}} ->
@@ -194,15 +202,19 @@ defmodule Logix.Proof do
 
   @spec find_disjunction_including(t(), [statement()]) :: step() | nil
   defp find_disjunction_including(proof, statements) do
-    Enum.find(proof.steps, fn {_line_num, {statement, _just}} ->
-      case statement do
-        {:or, [left, right]} ->
-          left in statements and right in statements
-
-        _ ->
-          nil
-      end
+    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+      find_anywhere(statement, &disjunction_of(&1, statements))
     end)
+
+    # Enum.find(proof.steps, fn {_line_num, {statement, _just}} ->
+    #   case statement do
+    #     {:or, [left, right]} ->
+    #       left in statements and right in statements
+
+    #     _ ->
+    #       nil
+    #   end
+    # end)
   end
 
   @spec try_implication_elimination(t(), statement()) :: {:ok, t()} | nil
@@ -299,6 +311,13 @@ defmodule Logix.Proof do
   end
 
   ## MATCHERS
+
+  @spec disjunction_of(statement(), [statement()]) :: statement() | nil
+  defp disjunction_of({:or, [left, right]} = disjunction, statements) do
+    if left in statements and right in statements, do: disjunction
+  end
+
+  defp disjunction_of(_, _), do: nil
 
   @spec conjunction_of(statement(), statement()) :: statement() | nil
   defp conjunction_of({:and, [conclusion, _]} = conjunction, conclusion), do: conjunction
