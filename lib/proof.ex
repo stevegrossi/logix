@@ -92,12 +92,12 @@ defmodule Logix.Proof do
   defp try_conjunction_introduction(proof, {:and, [left, right]} = conclusion) do
     with {:ok, proof} <- prove(proof, left),
          {:ok, proof} <- prove(proof, right) do
-      {line_proving_left, _} = justification_for(proof, left)
-      {line_proving_right, _} = justification_for(proof, right)
+      {step_proving_left, _} = justification_for(proof, left)
+      {step_proving_right, _} = justification_for(proof, right)
 
       conclude(proof, conclusion, :conjunction_introduction, [
-        line_proving_left,
-        line_proving_right
+        step_proving_left,
+        step_proving_right
       ])
     else
       _ -> nil
@@ -110,15 +110,15 @@ defmodule Logix.Proof do
   defp try_disjunction_introduction(proof, {:or, [left, right]} = conclusion) do
     case prove(proof, left) do
       {:ok, proof} ->
-        {line_proving_left, _} = justification_for(proof, left)
-        conclude(proof, conclusion, :disjunction_introduction, [line_proving_left])
+        {step_proving_left, _} = justification_for(proof, left)
+        conclude(proof, conclusion, :disjunction_introduction, [step_proving_left])
 
       @failure ->
         case prove(proof, right) do
           {:ok, proof} ->
-            {line_proving_right, _} = justification_for(proof, right)
+            {step_proving_right, _} = justification_for(proof, right)
 
-            conclude(proof, conclusion, :disjunction_introduction, [line_proving_right])
+            conclude(proof, conclusion, :disjunction_introduction, [step_proving_right])
 
           @failure ->
             nil
@@ -149,44 +149,44 @@ defmodule Logix.Proof do
   @spec try_conjunction_elimination(t(), statement()) :: {:ok, t()} | nil
   defp try_conjunction_elimination(proof, conclusion) do
     with {_, {statement_with_conjunction, _reason}} <-
-           find_line_including_conjunct(proof, conclusion),
+           find_step_including_conjunct(proof, conclusion),
          {:and, _} = conjunction <-
            find_anywhere(statement_with_conjunction, &conjunction_of(&1, conclusion)),
          {:ok, proof} <- prove(proof, conjunction) do
-      {line, _} = justification_for(proof, conjunction)
-      conclude(proof, conclusion, :conjunction_elimination, [line])
+      {step, _} = justification_for(proof, conjunction)
+      conclude(proof, conclusion, :conjunction_elimination, [step])
     else
       _ -> nil
     end
   end
 
-  @spec find_line_including_conjunct(t(), statement()) :: step() | nil
-  defp find_line_including_conjunct(proof, conclusion) do
-    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+  @spec find_step_including_conjunct(t(), statement()) :: step() | nil
+  defp find_step_including_conjunct(proof, conclusion) do
+    Enum.find(proof.steps, fn {_step, {statement, _reason}} ->
       find_anywhere(statement, &conjunction_of(&1, conclusion))
     end)
   end
 
   @spec try_disjunction_elimination(t(), statement()) :: {:ok, t()} | nil
   defp try_disjunction_elimination(proof, conclusion) do
-    with [_ | [_ | _]] = implication_lines <- find_implications_concluding(proof, conclusion),
-         antecedents <- list_antecedents_for(implication_lines, conclusion),
-         {_line_with_disjunction, {statement_with_disjunction, _just}} <-
+    with [_ | [_ | _]] = implication_steps <- find_implications_concluding(proof, conclusion),
+         antecedents <- list_antecedents_for(implication_steps, conclusion),
+         {_step_with_disjunction, {statement_with_disjunction, _just}} <-
            find_disjunction_including(proof, antecedents),
          {:or, disjuncts} = disjunction <-
            find_anywhere(statement_with_disjunction, &disjunction_of(&1, antecedents)),
          {:ok, proof} <- prove(proof, disjunction),
          implications <- Enum.map(disjuncts, &{:if, [&1, conclusion]}),
          {:ok, proof} <- prove_many(proof, implications),
-         relevant_implication_lines <- Enum.map(implications, &justification_for(proof, &1)),
+         relevant_implication_steps <- Enum.map(implications, &justification_for(proof, &1)),
          relevant_implication_step_numbers <-
-           Enum.map(relevant_implication_lines, &step_number(&1)),
-         {disjunction_line, _} <- justification_for(proof, disjunction) do
+           Enum.map(relevant_implication_steps, &step_number(&1)),
+         {disjunction_step, _} <- justification_for(proof, disjunction) do
       conclude(
         proof,
         conclusion,
         :disjunction_elimination,
-        relevant_implication_step_numbers ++ [disjunction_line]
+        relevant_implication_step_numbers ++ [disjunction_step]
       )
     else
       _ -> nil
@@ -194,11 +194,11 @@ defmodule Logix.Proof do
   end
 
   @spec step_number(step()) :: step_number()
-  defp step_number({line_num, _} = _line), do: line_num
+  defp step_number({step_num, _} = _step), do: step_num
 
   @spec list_antecedents_for([step()], statement()) :: list()
-  defp list_antecedents_for(lines_with_implications, consequent) do
-    Enum.map(lines_with_implications, fn {_step, {statement, _just}} ->
+  defp list_antecedents_for(steps_with_implications, consequent) do
+    Enum.map(steps_with_implications, fn {_step, {statement, _just}} ->
       statement
       |> find_anywhere(&implication_of(&1, consequent))
       |> other_operand(consequent)
@@ -207,35 +207,35 @@ defmodule Logix.Proof do
 
   @spec find_disjunction_including(t(), [statement()]) :: step() | nil
   defp find_disjunction_including(proof, statements) do
-    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+    Enum.find(proof.steps, fn {_step, {statement, _reason}} ->
       find_anywhere(statement, &disjunction_of(&1, statements))
     end)
   end
 
   @spec try_implication_elimination(t(), statement()) :: {:ok, t()} | nil
   defp try_implication_elimination(proof, conclusion) do
-    with {_line, {statement_containing_implication, _just}} <-
-           find_line_including_implication_of(proof, conclusion),
+    with {_step, {statement_containing_implication, _just}} <-
+           find_step_including_implication_of(proof, conclusion),
          {:if, _} = implication_implying_conclusion <-
            find_anywhere(statement_containing_implication, &implication_of(&1, conclusion)),
          antecedent <- other_operand(implication_implying_conclusion, conclusion),
          {:ok, proof} <- prove(proof, antecedent),
          {:ok, proof} <- prove(proof, implication_implying_conclusion),
-         {line_implying_conclusion, _} <-
+         {step_implying_conclusion, _} <-
            justification_for(proof, implication_implying_conclusion),
-         {line_justifying_antecedent, _} <- justification_for(proof, antecedent) do
+         {step_justifying_antecedent, _} <- justification_for(proof, antecedent) do
       conclude(proof, conclusion, :implication_elimination, [
-        line_implying_conclusion,
-        line_justifying_antecedent
+        step_implying_conclusion,
+        step_justifying_antecedent
       ])
     else
       _ -> nil
     end
   end
 
-  @spec find_line_including_implication_of(t(), statement()) :: step() | nil
-  defp find_line_including_implication_of(proof, conclusion) do
-    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+  @spec find_step_including_implication_of(t(), statement()) :: step() | nil
+  defp find_step_including_implication_of(proof, conclusion) do
+    Enum.find(proof.steps, fn {_step, {statement, _reason}} ->
       find_anywhere(statement, &implication_of(&1, conclusion))
     end)
   end
@@ -248,19 +248,19 @@ defmodule Logix.Proof do
 
   @spec try_biconditional_elimination(t(), statement()) :: {:ok, t()} | nil
   defp try_biconditional_elimination(proof, conclusion) do
-    with {_line, {statement_with_biconditional, _just}} <-
-           find_line_including_biconditional_of(proof, conclusion),
+    with {_step, {statement_with_biconditional, _just}} <-
+           find_step_including_biconditional_of(proof, conclusion),
          {:iff, _} = biconditional_implying_conclusion <-
            find_anywhere(statement_with_biconditional, &biconditional_of(&1, conclusion)),
          other_side <- other_operand(biconditional_implying_conclusion, conclusion),
          {:ok, proof} <- prove(proof, other_side),
          {:ok, proof} <- prove(proof, biconditional_implying_conclusion),
-         {line_implying_conclusion, _} <-
+         {step_implying_conclusion, _} <-
            justification_for(proof, biconditional_implying_conclusion),
-         {line_justifying_other_side, _} <- justification_for(proof, other_side) do
+         {step_justifying_other_side, _} <- justification_for(proof, other_side) do
       conclude(proof, conclusion, :biconditional_elimination, [
-        line_justifying_other_side,
-        line_implying_conclusion
+        step_justifying_other_side,
+        step_implying_conclusion
       ])
     else
       _ -> nil
@@ -272,22 +272,22 @@ defmodule Logix.Proof do
   defp other_operand({_operator, [given, other]}, given), do: other
   defp other_operand(_, _), do: nil
 
-  @spec find_line_including_biconditional_of(t(), statement()) :: step() | nil
-  defp find_line_including_biconditional_of(proof, conclusion) do
-    Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
+  @spec find_step_including_biconditional_of(t(), statement()) :: step() | nil
+  defp find_step_including_biconditional_of(proof, conclusion) do
+    Enum.find(proof.steps, fn {_step, {statement, _reason}} ->
       find_anywhere(statement, &biconditional_of(&1, conclusion))
     end)
   end
 
   @spec justification_for(t(), statement()) :: step() | nil
   defp justification_for(proof, conclusion) do
-    Enum.find(proof.steps, fn {_line, {result, _just}} ->
+    Enum.find(proof.steps, fn {_step, {result, _just}} ->
       result == conclusion
     end)
   end
 
   defp find_implications_concluding(proof, conclusion) do
-    Enum.filter(proof.steps, fn {_line, {statement, _reason}} ->
+    Enum.filter(proof.steps, fn {_step, {statement, _reason}} ->
       not is_nil(find_anywhere(statement, &implication_of(&1, conclusion)))
     end)
   end
