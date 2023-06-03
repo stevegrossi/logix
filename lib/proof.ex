@@ -31,6 +31,9 @@ defmodule Logix.Proof do
           | :disjunction_elimination
           | :disjunction_introduction
           | :implication_elimination
+          | :implication_introduction
+          | :negation_elimination
+          | :negation_introduction
   @type failure :: {:error, :proof_failed}
   @type result :: steps() | failure()
 
@@ -59,6 +62,7 @@ defmodule Logix.Proof do
         try_conjunction_introduction(proof, conclusion) ||
         try_disjunction_introduction(proof, conclusion) ||
         try_biconditional_introduction(proof, conclusion) ||
+        try_implication_introduction(proof, conclusion) ||
         @failure
     end
   end
@@ -267,6 +271,23 @@ defmodule Logix.Proof do
     end
   end
 
+  @spec try_implication_introduction(t(), statement()) :: {:ok, t()} | nil
+  defp try_implication_introduction(proof, {:if, [antecedent, consequent]} = conclusion) do
+    with {:ok, proof} <- assume(proof, antecedent),
+         {:ok, proof} <- prove(proof, consequent),
+         {assumption_line, _} = justification_for(proof, antecedent),
+         {consequent_line, _} <- justification_for(proof, consequent) do
+      conclude(proof, conclusion, :implication_introduction, [
+        assumption_line,
+        consequent_line
+      ])
+    else
+      _ -> nil
+    end
+  end
+
+  defp try_implication_introduction(_proof, _), do: nil
+
   @spec other_operand(statement(), statement()) :: statement()
   defp other_operand({_operator, [other, given]}, given), do: other
   defp other_operand({_operator, [given, other]}, given), do: other
@@ -299,6 +320,16 @@ defmodule Logix.Proof do
      |> Map.put(:next_step, proof.next_step + 1)
      |> Map.update!(:steps, fn steps ->
        Map.put(steps, proof.next_step, {conclusion, {rule, Enum.sort(justifications)}})
+     end)}
+  end
+
+  @spec assume(t(), statement()) :: {:ok, t()}
+  defp assume(proof, assumption) do
+    {:ok,
+     proof
+     |> Map.put(:next_step, proof.next_step + 1)
+     |> Map.update!(:steps, fn steps ->
+       Map.put(steps, proof.next_step, {assumption, :assumption})
      end)}
   end
 

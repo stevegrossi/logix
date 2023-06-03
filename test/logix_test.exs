@@ -412,5 +412,20 @@ defmodule LogixTest do
                   8 => {"C", {:disjunction_elimination, [3, 6, 7]}}
                 }}
     end
+
+    test "proves simple implications by introduction" do
+      assert Logix.prove(["A->(A^B)"], "A->B") ==
+               {:ok,
+                %{
+                  1 => {"A->(A^B)", :premise},
+                  2 => {"A", :assumption},
+                  3 => {"A^B", {:implication_elimination, [1, 2]}},
+                  4 => {"B", {:conjunction_elimination, [3]}},
+                  5 => {"A->B", {:implication_introduction, [2, 4]}}
+                }}
+    end
+
+    # More complex:
+    # test Logix.prove(["Bv~A"], "A->B")
   end
 end

@@ -58,20 +58,9 @@ Logix.prove(["A"], "B")
 #=> {:error, :proof_failed}
 ```
 
-## Eventually...
-
-- derive logical truths (i.e. `A->A`, `B v ~B`) from 0 assumptions
-
 ## Addenda
-### The 12 Rules of Logical Inference
 
-#### Assumption
-
-You can assume anything, but assumptions introduce a new scope. Nothing proven within an assumptions' scope can be used outside that scope. But, proving that something follows from an assuption lets you apply some of the rules below.
-
-#### Repetition
-
-If you have "X", then you're entitled to "X". Perhaps useful to repeating assumptions when proving lemmas.
+### The Rules of Logical Inference
 
 #### Implication Introduction
 
@@ -125,6 +114,8 @@ Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're en
 ### TODO
 - [ ] Implement the proof-by-assumption strategies: implication introduction, negation introduction, and negation elimination
 - [ ] Could things be simpler if sentences were tagged? e.g. `{:sentence, "A"}` instead of bare strings
+- [ ] Derive logical truths (i.e. `A->A`, `B v ~B`) from 0 assumptions
+- [ ] Graduate to predicate logic
 
 ### Inspiration
 
