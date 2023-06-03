@@ -63,6 +63,14 @@ defmodule Logix.Proof do
     end
   end
 
+  @spec prove_many(t(), [statement()]) :: {:ok, t()} | failure()
+  defp prove_many(proof, conclusions) do
+    Enum.reduce(conclusions, {:ok, proof}, fn
+      conclusion, {:ok, proof} -> prove(proof, conclusion)
+      _conclusion, @failure -> @failure
+    end)
+  end
+
   @spec format(t()) :: steps()
   def format(proof) do
     Map.new(proof.steps, fn {step, {statement, justification}} ->
@@ -162,41 +170,38 @@ defmodule Logix.Proof do
   @spec try_disjunction_elimination(t(), statement()) :: {:ok, t()} | nil
   defp try_disjunction_elimination(proof, conclusion) do
     with [_ | [_ | _]] = implication_lines <- find_implications_concluding(proof, conclusion),
-         antecedents <- list_antecedents(implication_lines),
+         antecedents <- list_antecedents_for(implication_lines, conclusion),
          {_line_with_disjunction, {statement_with_disjunction, _just}} <-
            find_disjunction_including(proof, antecedents),
          {:or, disjuncts} = disjunction <-
            find_anywhere(statement_with_disjunction, &disjunction_of(&1, antecedents)),
          {:ok, proof} <- prove(proof, disjunction),
-         relevant_implication_lines <- filter_by_antecedents(implication_lines, disjuncts),
+         implications <- Enum.map(disjuncts, &{:if, [&1, conclusion]}),
+         {:ok, proof} <- prove_many(proof, implications),
+         relevant_implication_lines <- Enum.map(implications, &justification_for(proof, &1)),
+         relevant_implication_step_numbers <-
+           Enum.map(relevant_implication_lines, &step_number(&1)),
          {disjunction_line, _} <- justification_for(proof, disjunction) do
       conclude(
         proof,
         conclusion,
         :disjunction_elimination,
-        relevant_implication_lines ++ [disjunction_line]
+        relevant_implication_step_numbers ++ [disjunction_line]
       )
     else
       _ -> nil
     end
   end
 
-  defp filter_by_antecedents(lines, antecedents) do
-    lines
-    |> Enum.filter(fn implication_line ->
-      {_line, {{:if, [antecedent, _consequent]}, _just}} = implication_line
-      antecedent in antecedents
-    end)
-    |> Enum.map(&step_number(&1))
-  end
-
   @spec step_number(step()) :: step_number()
   defp step_number({line_num, _} = _line), do: line_num
 
-  @spec list_antecedents([{:iff, list()}]) :: list()
-  defp list_antecedents(implication_lines) do
-    Enum.map(implication_lines, fn {_line_num, {{:if, [antecedent, _conclusion]}, _just}} ->
-      antecedent
+  @spec list_antecedents_for([step()], statement()) :: list()
+  defp list_antecedents_for(lines_with_implications, consequent) do
+    Enum.map(lines_with_implications, fn {_step, {statement, _just}} ->
+      statement
+      |> find_anywhere(&implication_of(&1, consequent))
+      |> other_operand(consequent)
     end)
   end
 
@@ -205,16 +210,6 @@ defmodule Logix.Proof do
     Enum.find(proof.steps, fn {_line, {statement, _reason}} ->
       find_anywhere(statement, &disjunction_of(&1, statements))
     end)
-
-    # Enum.find(proof.steps, fn {_line_num, {statement, _just}} ->
-    #   case statement do
-    #     {:or, [left, right]} ->
-    #       left in statements and right in statements
-
-    #     _ ->
-    #       nil
-    #   end
-    # end)
   end
 
   @spec try_implication_elimination(t(), statement()) :: {:ok, t()} | nil
@@ -292,11 +287,8 @@ defmodule Logix.Proof do
   end
 
   defp find_implications_concluding(proof, conclusion) do
-    Enum.filter(proof.steps, fn {_line, {statement, _just}} ->
-      case statement do
-        {:if, [_antecedent, ^conclusion]} -> true
-        _ -> false
-      end
+    Enum.filter(proof.steps, fn {_line, {statement, _reason}} ->
+      not is_nil(find_anywhere(statement, &implication_of(&1, conclusion)))
     end)
   end
 
@@ -313,7 +305,7 @@ defmodule Logix.Proof do
   ## MATCHERS
 
   @spec disjunction_of(statement(), [statement()]) :: statement() | nil
-  defp disjunction_of({:or, [left, right]} = disjunction, statements) do
+  defp disjunction_of({:or, [left, right]} = disjunction, statements) when is_list(statements) do
     if left in statements and right in statements, do: disjunction
   end
 

@@ -399,29 +399,18 @@ defmodule LogixTest do
     end
 
     test "proves by disjunction elimination with other steps" do
-      assert Logix.prove(["D", "D->(AvB)", "A->C", "B->C"], "C") ==
+      assert Logix.prove(["D", "D->(AvB)", "A->C", "E", "E->(B->C)"], "C") ==
                {:ok,
                 %{
                   1 => {"D", :premise},
                   2 => {"D->(AvB)", :premise},
                   3 => {"A->C", :premise},
-                  4 => {"B->C", :premise},
-                  5 => {"AvB", {:implication_elimination, [1, 2]}},
-                  6 => {"C", {:disjunction_elimination, [3, 4, 5]}}
+                  4 => {"E", :premise},
+                  5 => {"E->(B->C)", :premise},
+                  6 => {"AvB", {:implication_elimination, [1, 2]}},
+                  7 => {"B->C", {:implication_elimination, [4, 5]}},
+                  8 => {"C", {:disjunction_elimination, [3, 6, 7]}}
                 }}
-
-      # assert Logix.prove(["D", "D->(AvB)", "A->C", "E", "E->(B->C)"], "C") ==
-      #          {:ok,
-      #           %{
-      #             1 => {"D", :premise},
-      #             2 => {"D->(AvB)", :premise},
-      #             3 => {"A->C", :premise},
-      #             4 => {"E", :premise},
-      #             5 => {"E->(B->C)", :premise},
-      #             6 => {"AvB", {:implication_elimination, [1, 2]}},
-      #             7 => {"B->C", {:implication_elimination, [4, 5]}},
-      #             8 => {"C", {:disjunction_elimination, [3, 6, 7]}}
-      #           }}
     end
   end
 end
