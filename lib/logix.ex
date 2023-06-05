@@ -96,11 +96,13 @@ defmodule Logix do
       premises
       |> Enum.map(&parse/1)
       |> Proof.new(parse(conclusion))
-      |> Proof.prove()
 
-    case result do
-      {:ok, successful_proof} -> {:ok, Proof.format(successful_proof)}
-      error -> error
+    task = Task.async(fn -> Proof.prove(result) end)
+
+    case Task.yield(task, 2000) do
+      nil -> {:error, :timeout}
+      {:ok, {:ok, successful_proof}} -> {:ok, Proof.format(successful_proof)}
+      {:ok, {:error, _} = error} -> error
     end
   end
 
