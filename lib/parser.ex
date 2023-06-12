@@ -8,6 +8,7 @@ defmodule Logix.Parser do
 
   @type error :: {:error, :parse_error}
 
+  # e.g. "A", "B", etc.
   sentence = ascii_string([?A..?Z], 1)
 
   statement =
@@ -19,6 +20,7 @@ defmodule Logix.Parser do
       sentence
     ])
 
+  # e.g. "AvB", "Av(BvC)"
   disjunction =
     empty()
     |> concat(statement)
@@ -26,6 +28,7 @@ defmodule Logix.Parser do
     |> concat(statement)
     |> tag(:or)
 
+  # e.g. "A^B", "A^(BvC)"
   conjunction =
     empty()
     |> concat(statement)
@@ -33,6 +36,7 @@ defmodule Logix.Parser do
     |> concat(statement)
     |> tag(:and)
 
+  # e.g. "A->B", "(A^B)->C"
   implication =
     empty()
     |> concat(statement)
@@ -40,6 +44,7 @@ defmodule Logix.Parser do
     |> concat(statement)
     |> tag(:if)
 
+  # e.g. "A<->B", "(A^B)<->(B^A)"
   biconditional =
     empty()
     |> concat(statement)
@@ -47,6 +52,7 @@ defmodule Logix.Parser do
     |> concat(statement)
     |> tag(:iff)
 
+  # e.g. "~A", ~(AvB)
   defcombinatorp(
     :negation,
     ignore(string("~"))
