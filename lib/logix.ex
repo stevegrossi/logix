@@ -91,7 +91,7 @@ defmodule Logix do
 
   """
   @spec prove([String.t()], String.t()) :: Parser.error() | Proof.result()
-  def prove(premises, conclusion) do
+  def prove(premises \\ [], conclusion) do
     result =
       premises
       |> Enum.map(&parse/1)

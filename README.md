@@ -58,6 +58,19 @@ Logix.prove(["A"], "B")
 #=> {:error, :proof_failed}
 ```
 
+### Proving Tautologies from No Assumptions
+
+```elixir
+Logix.prove("B->(A->B)")
+#=> {:ok,
+#=> %{
+#=>   1 => {"B", :assumption},
+#=>   2 => {"A", :assumption},
+#=>   3 => {"A->B", {:implication_introduction, [1, 2]}},
+#=>   4 => {"B->(A->B)", {:implication_introduction, [1, 3]}}
+#=> }}
+```
+
 ## Addenda
 
 ### The Rules of Logical Inference
@@ -117,7 +130,6 @@ Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're en
   - all assumptions must be discharged for the proof to be valid. Right now Logix can just assume what it wants to prove and be done. But how to represent assumptions to ensure their fulfillment?
   - In the case of `A->(A^B)`, Logix tries to prove `A^B` by implication elimination, so it first tries to prove the antecedent `A`, sees it in `A^B` and tries to prove it by conjunction elimination, so it tries to prove `A^B` by implication elimination... So we may need to keep track of which line we're trying to prove and not try to prove that line with itself or parts of itself.
 - [ ] Could things be simpler if sentences were tagged? e.g. `{:sentence, "A"}` instead of bare strings
-- [ ] Derive logical truths (i.e. `A->A`, `B v ~B`) from 0 assumptions
 - [ ] Use ["gappy truth tables"](https://sites.oxy.edu/traiger/logic/primer/chapter5/gappy.html) to optimize semantic functions, e.g. we need only one invalid row to refute equivalence so we don't need to calculate them all. (Such optimization will be especially noticeable with many variables, since truth table complexity grows exponentially with that.)
 - [ ] Graduate to predicate logic 🎓
 

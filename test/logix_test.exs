@@ -425,7 +425,21 @@ defmodule LogixTest do
                 }}
     end
 
+    test "proves tautologies from no assumptions" do
+      assert Logix.prove("B->(A->B)") ==
+               {:ok,
+                %{
+                  1 => {"B", :assumption},
+                  2 => {"A", :assumption},
+                  3 => {"A->B", {:implication_introduction, [1, 2]}},
+                  4 => {"B->(A->B)", {:implication_introduction, [1, 3]}}
+                }}
+    end
+
     # More complex:
     # test Logix.prove(["Bv~A"], "A->B")
+
+    # Nested implication introduction:
+    # test Logix.prove(["(~Q->~T)", "(Mv~T)", "(T^~B)", "(M->S)"], "(R->((P->Q)^S))")
   end
 end
