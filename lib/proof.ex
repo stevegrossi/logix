@@ -288,6 +288,48 @@ defmodule Logix.Proof do
 
   defp try_implication_introduction(_proof, _), do: nil
 
+  @spec try_negation_introduction(t(), statement()) :: {:ok, t()} | nil
+  defp try_negation_introduction(proof, {:not, [statement]} = conclusion) do
+    with {:ok, proof} <- assume(proof, statement),
+         sentence when is_binary(sentence) <- find_first_sentence(proof),
+         {:ok, proof} <- prove(proof, {:and, [sentence, {:not, [sentence]}]}),
+         {assumption_line, _} <- justification_for(proof, statement),
+         {contradiction_line, _} <-
+           justification_for(proof, {:and, [sentence, {:not, [sentence]}]}) do
+      conclude(proof, conclusion, :negation_introduction, [
+        assumption_line,
+        contradiction_line
+      ])
+    else
+      _ -> nil
+    end
+  end
+
+  defp try_negation_introduction(_proof, _), do: nil
+
+  @spec try_negation_elimination(t(), statement()) :: {:ok, t()} | nil
+  defp try_negation_elimination(proof, conclusion) do
+    with {:ok, proof} <- assume(proof, {:not, [conclusion]}),
+         sentence when is_binary(sentence) <- find_first_sentence(proof),
+         {:ok, proof} <- prove(proof, {:and, [sentence, {:not, [sentence]}]}),
+         {assumption_line, _} <- justification_for(proof, {:not, [conclusion]}),
+         {contradiction_line, _} <-
+           justification_for(proof, {:and, [sentence, {:not, [sentence]}]}) do
+      conclude(proof, conclusion, :negation_elimination, [
+        assumption_line,
+        contradiction_line
+      ])
+    else
+      _ -> nil
+    end
+  end
+
+  defp find_first_sentence(proof) do
+    Enum.find_value(proof.steps, fn {_step, {statement, _reason}} ->
+      if is_binary(statement), do: statement
+    end)
+  end
+
   @spec other_operand(statement(), statement()) :: statement()
   defp other_operand({_operator, [other, given]}, given), do: other
   defp other_operand({_operator, [given, other]}, given), do: other

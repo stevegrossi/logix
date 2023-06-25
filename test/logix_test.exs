@@ -436,6 +436,34 @@ defmodule LogixTest do
                 }}
     end
 
+    test "proves by negation introduction by deriving a contradiction from the first setence" do
+      # TODO: derive a contradiction from any sentence, then from any statement
+      assert Logix.prove(["A", "B->~A"], "~B") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"B->~A", :premise},
+                  3 => {"B", :assumption},
+                  4 => {"~A", {:implication_elimination, [2, 3]}},
+                  5 => {"A^~A", {:conjunction_introduction, [1, 4]}},
+                  6 => {"~B", {:negation_introduction, [3, 5]}}
+                }}
+    end
+
+    test "proves by negation eliminating by deriving a contradiction from the first setence" do
+      # TODO: derive a contradiction from any sentence, then from any statement
+      assert Logix.prove(["A", "~B->~A"], "B") ==
+               {:ok,
+                %{
+                  1 => {"A", :premise},
+                  2 => {"~B->~A", :premise},
+                  3 => {"~B", :assumption},
+                  4 => {"~A", {:implication_elimination, [2, 3]}},
+                  5 => {"A^~A", {:conjunction_introduction, [1, 4]}},
+                  6 => {"B", {:negation_elimination, [3, 5]}}
+                }}
+    end
+
     # More complex:
     # test Logix.prove(["Bv~A"], "A->B")
 
