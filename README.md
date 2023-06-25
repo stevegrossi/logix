@@ -127,8 +127,6 @@ Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're en
 ### TODO
 - Implement the semantic function `Proof.valid?` that uses truth tables to check the validity of a proof before trying to prove it?
 - [🚧] Implement the proof-by-assumption strategies: implication introduction, negation introduction, and negation elimination
-  - all assumptions must be discharged for the proof to be valid. Right now Logix can just assume what it wants to prove and be done. But how to represent assumptions to ensure their fulfillment? Or does the recursive proof strategy Logix uses ensure that it uses an assumption only if the `prove` call which introduced it concludes (and is thus discharged)?
-  - In the case of `A->(A^B)`, Logix tries to prove `A^B` by implication elimination, so it first tries to prove the antecedent `A`, sees it in `A^B` and tries to prove it by conjunction elimination, so it tries to prove `A^B` by implication elimination... So we may need to keep track of which line we're trying to prove and not try to prove that line with itself or parts of itself.
 - [ ] Could things be simpler if sentences were tagged? e.g. `{:sentence, "A"}` instead of bare strings
 - [ ] Use ["gappy truth tables"](https://sites.oxy.edu/traiger/logic/primer/chapter5/gappy.html) to optimize semantic functions, e.g. we need only one invalid row to refute equivalence so we don't need to calculate them all. (Such optimization will be especially noticeable with many variables, since truth table complexity grows exponentially with that.)
 - [ ] Graduate to predicate logic 🎓
