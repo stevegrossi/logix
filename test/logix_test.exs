@@ -436,31 +436,31 @@ defmodule LogixTest do
                 }}
     end
 
-    test "proves by negation introduction by deriving a contradiction from the first setence" do
-      # TODO: derive a contradiction from any sentence, then from any statement
-      assert Logix.prove(["A", "B->~A"], "~B") ==
+    test "proves by negation introduction by deriving a contradiction from a setence" do
+      assert Logix.prove(["C", "A", "B->~A"], "~B") ==
                {:ok,
                 %{
-                  1 => {"A", :premise},
-                  2 => {"B->~A", :premise},
-                  3 => {"B", :assumption},
-                  4 => {"~A", {:implication_elimination, [2, 3]}},
-                  5 => {"A^~A", {:conjunction_introduction, [1, 4]}},
-                  6 => {"~B", {:negation_introduction, [3, 5]}}
+                  1 => {"C", :premise},
+                  2 => {"A", :premise},
+                  3 => {"B->~A", :premise},
+                  4 => {"B", :assumption},
+                  5 => {"~A", {:implication_elimination, [3, 4]}},
+                  6 => {"A^~A", {:conjunction_introduction, [2, 5]}},
+                  7 => {"~B", {:negation_introduction, [4, 6]}}
                 }}
     end
 
-    test "proves by negation elimination by deriving a contradiction from the first setence" do
-      # TODO: derive a contradiction from any sentence, then from any statement
-      assert Logix.prove(["A", "~B->~A"], "B") ==
+    test "proves by negation elimination by deriving a contradiction from a setence" do
+      assert Logix.prove(["C", "A", "~B->~A"], "B") ==
                {:ok,
                 %{
-                  1 => {"A", :premise},
-                  2 => {"~B->~A", :premise},
-                  3 => {"~B", :assumption},
-                  4 => {"~A", {:implication_elimination, [2, 3]}},
-                  5 => {"A^~A", {:conjunction_introduction, [1, 4]}},
-                  6 => {"B", {:negation_elimination, [3, 5]}}
+                  1 => {"C", :premise},
+                  2 => {"A", :premise},
+                  3 => {"~B->~A", :premise},
+                  4 => {"~B", :assumption},
+                  5 => {"~A", {:implication_elimination, [3, 4]}},
+                  6 => {"A^~A", {:conjunction_introduction, [2, 5]}},
+                  7 => {"B", {:negation_elimination, [4, 6]}}
                 }}
     end
 

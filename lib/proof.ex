@@ -84,12 +84,25 @@ defmodule Logix.Proof do
     end
   end
 
-  @spec prove_many(t(), [statement()]) :: {:ok, t()} | failure()
-  defp prove_many(proof, conclusions) do
+  @spec prove_all(t(), [statement()]) :: {:ok, t()} | failure()
+  defp prove_all(proof, conclusions) do
     Enum.reduce(conclusions, {:ok, proof}, fn
       conclusion, {:ok, proof} -> prove(proof, conclusion)
       _conclusion, @failure -> @failure
     end)
+  end
+
+  # Proves which of the given conclusions can be proven most efficiently
+  @spec prove_one(t(), [statement()]) :: {:ok, t()} | failure()
+  defp prove_one(proof, conclusions) do
+    conclusions
+    |> Enum.flat_map(fn conclusion ->
+      case prove(proof, conclusion) do
+        {:ok, proof} -> [{:ok, proof}]
+        @failure -> []
+      end
+    end)
+    |> Enum.min_by(fn {:ok, proof} -> map_size(proof.steps) end, fn -> nil end)
   end
 
   @spec format(t()) :: steps()
@@ -198,7 +211,7 @@ defmodule Logix.Proof do
            find_anywhere(statement_with_disjunction, &disjunction_of(&1, antecedents)),
          {:ok, proof} <- prove(proof, disjunction),
          implications <- Enum.map(disjuncts, &{:if, [&1, conclusion]}),
-         {:ok, proof} <- prove_many(proof, implications),
+         {:ok, proof} <- prove_all(proof, implications),
          relevant_implication_steps <- Enum.map(implications, &justification_for(proof, &1)),
          relevant_implication_step_numbers <-
            Enum.map(relevant_implication_steps, &step_number(&1)),
@@ -308,11 +321,10 @@ defmodule Logix.Proof do
   @spec try_negation_introduction(t(), statement()) :: {:ok, t()} | nil
   defp try_negation_introduction(proof, {:not, [statement]} = conclusion) do
     with {:ok, proof} <- assume(proof, statement),
-         sentence when is_binary(sentence) <- find_first_sentence(proof),
-         {:ok, proof} <- prove(proof, {:and, [sentence, {:not, [sentence]}]}),
+         sentences when is_list(sentences) <- find_sentences(proof),
+         {:ok, proof} <- prove_one(proof, Enum.map(sentences, &{:and, [&1, {:not, [&1]}]})),
          {assumption_line, _} <- justification_for(proof, statement),
-         {contradiction_line, _} <-
-           justification_for(proof, {:and, [sentence, {:not, [sentence]}]}) do
+         contradiction_line <- proof.next_step - 1 do
       conclude(proof, conclusion, :negation_introduction, [
         assumption_line,
         contradiction_line
@@ -327,11 +339,10 @@ defmodule Logix.Proof do
   @spec try_negation_elimination(t(), statement()) :: {:ok, t()} | nil
   defp try_negation_elimination(proof, conclusion) do
     with {:ok, proof} <- assume(proof, {:not, [conclusion]}),
-         sentence when is_binary(sentence) <- find_first_sentence(proof),
-         {:ok, proof} <- prove(proof, {:and, [sentence, {:not, [sentence]}]}),
+         sentences when is_list(sentences) <- find_sentences(proof),
+         {:ok, proof} <- prove_one(proof, Enum.map(sentences, &{:and, [&1, {:not, [&1]}]})),
          {assumption_line, _} <- justification_for(proof, {:not, [conclusion]}),
-         {contradiction_line, _} <-
-           justification_for(proof, {:and, [sentence, {:not, [sentence]}]}) do
+         contradiction_line <- proof.next_step - 1 do
       conclude(proof, conclusion, :negation_elimination, [
         assumption_line,
         contradiction_line
@@ -341,10 +352,13 @@ defmodule Logix.Proof do
     end
   end
 
-  defp find_first_sentence(proof) do
-    Enum.find_value(proof.steps, fn {_step, {statement, _reason}} ->
-      if is_binary(statement), do: statement
+  @spec find_sentences(t()) :: [String.t()]
+  defp find_sentences(proof) do
+    proof.steps
+    |> Enum.filter(fn {_step, {statement, _reason}} ->
+      is_binary(statement)
     end)
+    |> Enum.map(fn {_step, {statement, _reason}} -> statement end)
   end
 
   @spec other_operand(statement(), statement()) :: statement()
@@ -384,12 +398,16 @@ defmodule Logix.Proof do
 
   @spec assume(t(), statement()) :: {:ok, t()}
   defp assume(proof, assumption) do
-    {:ok,
-     proof
-     |> Map.put(:next_step, proof.next_step + 1)
-     |> Map.update!(:steps, fn steps ->
-       Map.put(steps, proof.next_step, {assumption, :assumption})
-     end)}
+    if justification_for(proof, assumption) do
+      {:error, :already_proven}
+    else
+      {:ok,
+       proof
+       |> Map.put(:next_step, proof.next_step + 1)
+       |> Map.update!(:steps, fn steps ->
+         Map.put(steps, proof.next_step, {assumption, :assumption})
+       end)}
+    end
   end
 
   ## MATCHERS
