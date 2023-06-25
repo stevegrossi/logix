@@ -450,7 +450,7 @@ defmodule LogixTest do
                 }}
     end
 
-    test "proves by negation eliminating by deriving a contradiction from the first setence" do
+    test "proves by negation elimination by deriving a contradiction from the first setence" do
       # TODO: derive a contradiction from any sentence, then from any statement
       assert Logix.prove(["A", "~B->~A"], "B") ==
                {:ok,

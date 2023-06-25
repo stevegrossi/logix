@@ -5,7 +5,7 @@ defmodule Logix.Proof do
   a Proof to more human-readable unparsed expressions, see format/1.
   """
 
-  @enforce_keys ~w[premises conclusion steps next_step]a
+  @enforce_keys ~w[premises conclusion steps next_step attempted]a
   defstruct @enforce_keys
 
   alias Logix.Parser
@@ -15,7 +15,8 @@ defmodule Logix.Proof do
           premises: [statement()],
           conclusion: statement(),
           steps: steps(),
-          next_step: pos_integer()
+          next_step: pos_integer(),
+          attempted: []
         }
   @type steps :: %{step_number() => step()}
   @type step :: {step_number(), {statement(), justification()}}
@@ -43,7 +44,8 @@ defmodule Logix.Proof do
       premises: premises,
       conclusion: conclusion,
       steps: %{},
-      next_step: 1
+      next_step: 1,
+      attempted: []
     })
   end
 
@@ -52,18 +54,33 @@ defmodule Logix.Proof do
 
   @spec prove(t(), term()) :: {:ok, t()} | failure()
   defp prove(proof, conclusion) do
-    if justification_for(proof, conclusion) do
-      {:ok, proof}
-    else
-      try_implication_elimination(proof, conclusion) ||
-        try_conjunction_elimination(proof, conclusion) ||
-        try_disjunction_elimination(proof, conclusion) ||
-        try_biconditional_elimination(proof, conclusion) ||
-        try_conjunction_introduction(proof, conclusion) ||
-        try_disjunction_introduction(proof, conclusion) ||
-        try_biconditional_introduction(proof, conclusion) ||
-        try_implication_introduction(proof, conclusion) ||
+    cond do
+      conclusion in proof.attempted ->
+        # Don’t try to prove the same conlusion twice. This avoids infinite loops.
         @failure
+
+      not is_nil(justification_for(proof, conclusion)) ->
+        # No need to prove something that’s already been derived.
+        {:ok, proof}
+
+      true ->
+        proof = Map.update!(proof, :attempted, &[conclusion | &1])
+
+        if justification_for(proof, conclusion) do
+          {:ok, proof}
+        else
+          try_implication_elimination(proof, conclusion) ||
+            try_conjunction_elimination(proof, conclusion) ||
+            try_disjunction_elimination(proof, conclusion) ||
+            try_biconditional_elimination(proof, conclusion) ||
+            try_conjunction_introduction(proof, conclusion) ||
+            try_disjunction_introduction(proof, conclusion) ||
+            try_biconditional_introduction(proof, conclusion) ||
+            try_implication_introduction(proof, conclusion) ||
+            try_negation_introduction(proof, conclusion) ||
+            try_negation_elimination(proof, conclusion) ||
+            @failure
+        end
     end
   end
 
