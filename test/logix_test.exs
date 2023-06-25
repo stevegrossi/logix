@@ -425,6 +425,18 @@ defmodule LogixTest do
                 }}
     end
 
+    test "proves by nested implication introduction" do
+      assert Logix.prove(["C"], "A->(B->C)") ==
+               {:ok,
+                %{
+                  1 => {"C", :premise},
+                  2 => {"A", :assumption},
+                  3 => {"B", :assumption},
+                  4 => {"B->C", {:implication_introduction, [1, 3]}},
+                  5 => {"A->(B->C)", {:implication_introduction, [2, 4]}}
+                }}
+    end
+
     test "proves tautologies from no assumptions" do
       assert Logix.prove("B->(A->B)") ==
                {:ok,
@@ -450,6 +462,10 @@ defmodule LogixTest do
                 }}
     end
 
+    # test "proves by negation introduction by deriving a contradiction not from an existing sentence" do
+    #   assert Logix.prove(["A->(~B^B)"], "~A") == %{}
+    # end
+
     test "proves by negation elimination by deriving a contradiction from a setence" do
       assert Logix.prove(["C", "A", "~B->~A"], "B") ==
                {:ok,
@@ -464,10 +480,11 @@ defmodule LogixTest do
                 }}
     end
 
+    # test "proves by negation introduction by deriving a contradiction not from an existing sentence" do
+    #   assert Logix.prove(["~A->(~B^B)"], "A") == %{}
+    # end
+
     # More complex:
     # test Logix.prove(["Bv~A"], "A->B")
-
-    # Nested implication introduction:
-    # test Logix.prove(["(~Q->~T)", "(Mv~T)", "(T^~B)", "(M->S)"], "(R->((P->Q)^S))")
   end
 end
