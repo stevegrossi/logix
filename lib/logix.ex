@@ -92,10 +92,12 @@ defmodule Logix do
   """
   @spec prove([String.t()], String.t()) :: Parser.error() | Proof.result()
   def prove(premises \\ [], conclusion) do
+    variables = [conclusion | premises] |> Enum.flat_map(&variables/1) |> Enum.uniq()
+
     result =
       premises
       |> Enum.map(&parse/1)
-      |> Proof.new(parse(conclusion))
+      |> Proof.new(parse(conclusion), variables)
 
     task = Task.async(fn -> Proof.prove(result) end)
 

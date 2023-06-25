@@ -5,24 +5,27 @@ defmodule Logix.Proof do
   a Proof to more human-readable unparsed expressions, see format/1.
   """
 
-  @enforce_keys ~w[premises conclusion steps next_step attempted]a
+  @enforce_keys ~w[premises conclusion steps next_step attempted variables]a
   defstruct @enforce_keys
 
   alias Logix.Parser
 
   @failure {:error, :proof_failed}
+
+  @type sentence :: Logix.sentence()
   @type t :: %__MODULE__{
           premises: [statement()],
           conclusion: statement(),
           steps: steps(),
           next_step: pos_integer(),
-          attempted: []
+          attempted: [statement()],
+          variables: [sentence()]
         }
   @type steps :: %{step_number() => step()}
   @type step :: {step_number(), {statement(), justification()}}
   @type step_number :: pos_integer()
   @type operator :: :not | :or | :and | :if | :iff
-  @type statement :: String.t() | {operator(), [statement()]}
+  @type statement :: sentence | {operator(), [statement()]}
   @type justification :: :premise | {rule(), [step_number()]}
   @type rule ::
           :biconditional_elimination
@@ -38,14 +41,15 @@ defmodule Logix.Proof do
   @type failure :: {:error, :proof_failed}
   @type result :: steps() | failure()
 
-  @spec new([statement()], statement()) :: t()
-  def new(premises, conclusion) do
+  @spec new([statement()], statement(), [sentence()]) :: t()
+  def new(premises, conclusion, variables) do
     initialize_steps(%__MODULE__{
       premises: premises,
       conclusion: conclusion,
       steps: %{},
       next_step: 1,
-      attempted: []
+      attempted: [],
+      variables: variables
     })
   end
 
@@ -321,8 +325,7 @@ defmodule Logix.Proof do
   @spec try_negation_introduction(t(), statement()) :: {:ok, t()} | nil
   defp try_negation_introduction(proof, {:not, [statement]} = conclusion) do
     with {:ok, proof} <- assume(proof, statement),
-         sentences when is_list(sentences) <- find_sentences(proof),
-         {:ok, proof} <- prove_one(proof, Enum.map(sentences, &{:and, [&1, {:not, [&1]}]})),
+         {:ok, proof} <- prove_one(proof, Enum.map(proof.variables, &contradiction_of/1)),
          {assumption_line, _} <- justification_for(proof, statement),
          contradiction_line <- proof.next_step - 1 do
       conclude(proof, conclusion, :negation_introduction, [
@@ -339,8 +342,7 @@ defmodule Logix.Proof do
   @spec try_negation_elimination(t(), statement()) :: {:ok, t()} | nil
   defp try_negation_elimination(proof, conclusion) do
     with {:ok, proof} <- assume(proof, {:not, [conclusion]}),
-         sentences when is_list(sentences) <- find_sentences(proof),
-         {:ok, proof} <- prove_one(proof, Enum.map(sentences, &{:and, [&1, {:not, [&1]}]})),
+         {:ok, proof} <- prove_one(proof, Enum.map(proof.variables, &contradiction_of/1)),
          {assumption_line, _} <- justification_for(proof, {:not, [conclusion]}),
          contradiction_line <- proof.next_step - 1 do
       conclude(proof, conclusion, :negation_elimination, [
@@ -350,15 +352,6 @@ defmodule Logix.Proof do
     else
       _ -> nil
     end
-  end
-
-  @spec find_sentences(t()) :: [String.t()]
-  defp find_sentences(proof) do
-    proof.steps
-    |> Enum.filter(fn {_step, {statement, _reason}} ->
-      is_binary(statement)
-    end)
-    |> Enum.map(fn {_step, {statement, _reason}} -> statement end)
   end
 
   @spec other_operand(statement(), statement()) :: statement()
@@ -432,4 +425,9 @@ defmodule Logix.Proof do
   defp biconditional_of({:iff, [conclusion, _]} = biconditional, conclusion), do: biconditional
   defp biconditional_of({:iff, [_, conclusion]} = biconditional, conclusion), do: biconditional
   defp biconditional_of(_, _), do: nil
+
+  @spec contradiction_of(statement()) :: statement()
+  defp contradiction_of(statement) when is_binary(statement) do
+    {:and, [statement, {:not, [statement]}]}
+  end
 end
