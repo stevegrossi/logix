@@ -40,7 +40,7 @@ Logix.equivalent?("A->B", "AvB")
 #=> false
 ```
 
-### Generating Proofs from Assumptions
+### Generating Proofs from Premises
 
 ```elixir
 Logix.prove(["A", "BvC", "B->D", "C->D"], "A^D")
@@ -58,7 +58,7 @@ Logix.prove(["A"], "B")
 #=> {:error, :proof_failed}
 ```
 
-### Proving Tautologies from No Assumptions
+### Proving Tautologies from No Premises
 
 ```elixir
 Logix.prove("B->(A->B)")
@@ -115,18 +115,8 @@ This rule requires you to prove something within the scope of an assumption. If 
 
 Likewise, if you assume "~X" and you can prove both "Y" and "~Y", then you're entitled to "X" outside the scope of that assumption.
 
-### Strategies for Proving Kinds of Statements
-
-- **any**: Negation Elimination, Implication Elimination, Disjunction Elimination, Conjunction Elimination, Biconditional Elimination
-- **negation**: Negation Introduction, any
-- **disjunction**: Disjunction Introduction, any
-- **conjunction**: Conjunction Introduction, any
-- **implication**: Implication Introduction, any
-- **biconditional**: Biconditional Introduction, any
-
 ### TODO
 - Implement the semantic function `Proof.valid?` that uses truth tables to check the validity of a proof before trying to prove it?
-- [🚧] Implement the proof-by-assumption strategies: implication introduction, negation introduction, and negation elimination
 - [ ] Could things be simpler if sentences were tagged? e.g. `{:sentence, "A"}` instead of bare strings
 - [ ] Use ["gappy truth tables"](https://sites.oxy.edu/traiger/logic/primer/chapter5/gappy.html) to optimize semantic functions, e.g. we need only one invalid row to refute equivalence so we don't need to calculate them all. (Such optimization will be especially noticeable with many variables, since truth table complexity grows exponentially with that.)
 - [ ] Graduate to predicate logic 🎓
